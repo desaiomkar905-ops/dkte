@@ -22,17 +22,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const updated = await assignWorker(id, workerId);
+    const worker = await prisma.user.findUnique({ where: { id: workerId }, select: { name: true } });
     await prisma.timelineEvent.create({
       data: {
         complaintId: id, type: "ASSIGNMENT", actor: `official:${official.name}`,
         title: "Field worker assigned",
-        detail: `Assigned to ${updated.assignedTo?.name ?? "worker"}${complaint.department ? ` (${complaint.department.name})` : ""}`,
+        detail: `Assigned to ${worker?.name ?? "worker"}${complaint.department ? ` (${complaint.department.name})` : ""}`,
       },
     });
     await prisma.agentActivity.create({
       data: {
         complaintId: id, agent: "DispatchAgent", action: "assign_worker",
-        summary: `Worker ${updated.assignedTo?.name ?? workerId} assigned to ${complaint.refCode}`,
+        summary: `Worker ${worker?.name ?? workerId} assigned to ${complaint.refCode}`,
       },
     });
 
