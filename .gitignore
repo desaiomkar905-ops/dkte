@@ -38,6 +38,12 @@ yarn-error.log*
 /storage/
 prisma/dev.db
 prisma/dev.db-journal
+scripts/fixtures/
+
+# python vision service
+vision-service/.venv/
+vision-service/model/*.pt
+**/__pycache__/
 
 # vercel
 .vercel

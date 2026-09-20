@@ -27,7 +27,15 @@ must reflect actual, verifiable work.
 - [x] `HACKATHON_CHECKLIST.md` — this file
 - [ ] Update the README "Live demo" placeholder with your deployed URL when available
 
-## 4. Deployment
+## 4. Vision model weight (CivicAI `best.pt`) — REQUIRED before the real-model demo
+
+- [ ] Obtain the exact `best.pt` from the CivicAI author (not publicly downloadable — verified; ask https://github.com/Sujit-1509 directly)
+- [ ] Place it at `vision-service/model/best.pt`; confirm `GET :8000/health` shows `model_loaded: true` and record `model.names`
+- [ ] Run `node scripts/test-yolo.mjs` with real pothole/garbage/water/streetlight photos; record actual class/confidence/bbox results
+- [ ] **Record the author's permission to use the weight** (message/email screenshot); only then may the README say "used with permission"
+- [ ] End-to-end: submit a real pothole photo and verify the Agent Activity panel shows the REAL YOLO MODEL chip with actual confidence
+
+## 5. Deployment
 
 - [ ] Deploy web app (Vercel or similar): set `DATABASE_URL` (Supabase Postgres), `AUTH_SECRET`, `CRON_SECRET`; **do not** set `RATE_LIMIT_MULTIPLIER` or leave `DEMO_MODE` enabled unless intended
 - [ ] Run `npx prisma db push` + `npx prisma db seed` against the production/preview database
@@ -35,14 +43,14 @@ must reflect actual, verifiable work.
 - [ ] Configure a cron hitting `/api/cron/sla` with the `x-cron-secret` header
 - [ ] Verify the deployed app: login, submit, dashboard, verification flow
 
-## 5. Demo video / PPT
+## 6. Demo video / PPT
 
 - [ ] Record the 4-minute demo following `DEMO.md` (citizen → agents → official → worker → AI verification → reopen/escalate → SLA demo)
 - [ ] Slide story: Problem → Solution → Live architecture → Agent pipeline → Honest-AI transparency → Impact → Roadmap
 - [ ] Show the Agent Activity panel and the `/api/health/ai` provider panel — they are the "agentic" proof
 - [ ] State clearly which AI providers were live during the demo
 
-## 6. Final testing gate (re-run before submitting)
+## 7. Final testing gate (re-run before submitting)
 
 ```bash
 npm install
@@ -56,7 +64,7 @@ npm run dev             # then: node scripts/smoke.mjs http://localhost:3000  (5
 
 All must pass. Record the date + results in the submission form.
 
-## 7. Team contribution plan (each member commits with their OWN git identity)
+## 8. Team contribution plan (each member commits with their OWN git identity)
 
 Rules: commit real work you personally did and understand; no manufactured
 commits; keep messages descriptive. Suggested ownership so each member has a
@@ -71,7 +79,7 @@ clear, genuine lane:
 
 Each area above has real, reviewable code changes — ideal commit material.
 
-## 8. Submission links (fill before submitting)
+## 9. Submission links (fill before submitting)
 
 - Repository: `________________`
 - Live demo: `________________`

@@ -78,13 +78,14 @@ export async function orchestrateNewComplaint(input: OrchestrationInput): Promis
   if (input.photo) {
     vision = await analyzeImage(input.photo.buffer, input.photo.mime, input.photo.demoHint);
     const det = vision.detections[0];
+    const modelNote = vision.model ? `, model ${vision.model}` : "";
     await log(
       AGENTS.vision,
       "analyze_image",
       det
-        ? `${det.label} detected (${(det.confidence * 100).toFixed(0)}% confidence, provider ${vision.provider})`
-        : `No known civic issue detected (provider ${vision.provider})`,
-      { provider: vision.provider, detections: vision.detections, note: vision.note }
+        ? `${det.label} detected (${(det.confidence * 100).toFixed(0)}% confidence, provider ${vision.provider}${modelNote})`
+        : `No known civic issue detected (provider ${vision.provider}${modelNote})`,
+      { provider: vision.provider, model: vision.model, detections: vision.detections, note: vision.note }
     );
   }
 

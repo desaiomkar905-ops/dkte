@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Python venv bundles third-party JS we must not lint:
+    "vision-service/.venv/**",
+    "**/__pycache__/**",
   ]),
 ]);
 

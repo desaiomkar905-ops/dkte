@@ -71,6 +71,7 @@ type ActivityDetail = {
   reasons?: string[];
   reasoning?: string[];
   provider?: string;
+  model?: string;
   note?: string;
   match?: { reasons?: string[] };
 };
@@ -83,6 +84,7 @@ function Reasons({ detail }: { detail: string }) {
     return null;
   }
   const provider = parsed?.provider;
+  const model = parsed?.model;
   const note = parsed?.note;
   const reasons = parsed?.reasons ?? parsed?.reasoning ?? parsed?.match?.reasons;
   const showProvider = provider ? true : false;
@@ -91,7 +93,7 @@ function Reasons({ detail }: { detail: string }) {
 
   return (
     <div className="mt-1">
-      {showProvider && <ProviderChip provider={provider as string} />}
+      {showProvider && <ProviderChip provider={provider as string} model={model} />}
       {note && <p className="text-xs italic text-slate-400">{note}</p>}
       {reasons && reasons.length > 0 && (
         <ul className="list-disc space-y-0.5 pl-5 text-xs text-slate-500">
@@ -104,16 +106,25 @@ function Reasons({ detail }: { detail: string }) {
   );
 }
 
-function ProviderChip({ provider }: { provider: string }) {
+function ProviderChip({ provider, model }: { provider: string; model?: string }) {
   const isDev = provider.startsWith("dev");
+  const realYolo = provider === "yolo-service";
   return (
     <span
-      title={isDev ? "Labeled development provider — not a real model inference" : "Production AI provider"}
+      title={
+        isDev
+          ? "Labeled development provider — not a real model inference"
+          : realYolo
+            ? `Real YOLOv8 model inference via the vision service${model ? ` (${model})` : ""}`
+            : "Production AI provider"
+      }
       className={`mr-2 inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ${
         isDev ? "bg-amber-50 text-amber-700 ring-amber-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200"
       }`}
     >
-      AI Provider: {provider}{isDev ? " (dev)" : ""}
+      {realYolo
+        ? `REAL YOLO MODEL${model ? ` · ${model}` : ""}`
+        : `AI Provider: ${provider}${isDev ? " (dev)" : ""}`}
     </span>
   );
 }

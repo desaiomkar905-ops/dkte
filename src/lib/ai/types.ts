@@ -14,10 +14,11 @@ export type VisionDetection = {
 };
 
 export type VisionResult = {
-  provider: string; // e.g. "yolo-service@v1" or "dev:hint"
+  provider: string; // e.g. "yolo-service" or "dev:hint"
   detections: VisionDetection[];
   category: string | null; // mapped civic category or null
   confidence: number; // overall confidence 0..1
+  model?: string; // weight file name when a real model ran (e.g. "civicai-best.pt")
   note?: string; // human-readable note shown in UI (e.g. "Simulated detection")
 };
 

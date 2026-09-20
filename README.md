@@ -58,7 +58,7 @@ See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for the full design, and
 |---|---|---|
 | Frontend + Backend | **Next.js 16 (App Router), TypeScript, Tailwind CSS v4** | one app, one deploy |
 | Database | **SQLite (Prisma ORM)** for the runnable prototype | schema is Postgres-ready — switch `provider` + `DATABASE_URL` to Supabase Postgres with no model changes |
-| AI — vision | **YOLOv8** via optional FastAPI microservice (`/vision-service`) | clearly-labeled dev provider when unavailable — never a silent fake |
+| AI — vision | **YOLOv8** via optional FastAPI microservice (`/vision-service`) | runs the CivicAI custom-trained `best.pt` when provided — see the model note below |
 | AI — reasoning | **Amazon Bedrock** (Claude) | labeled deterministic rule-based provider without AWS credentials |
 | Storage | Local disk driver behind a storage abstraction | S3 driver is a documented extension point |
 | Map | **Leaflet + OpenStreetMap** (react-leaflet) | severity-coded risk map |
@@ -122,6 +122,20 @@ node scripts/smoke.mjs http://localhost:3100   # end-to-end checks (56) against 
 Deploy targets: Vercel (web app) + any Postgres (Supabase) + the vision
 service on a small VM/container with your model weights. Scheduled SLA sweeps:
 call `/api/cron/sla` with the `x-cron-secret` header from your scheduler.
+
+## Vision model note (external dependency)
+
+The production vision path uses the **CivicAI custom-trained YOLOv8 model
+(`best.pt`)** — an external, custom-trained model dependency from the
+[CivicAI project](https://github.com/Sujit-1509/CivicAI). The weight itself is
+**not distributed** with that repository (verified: no releases; `model/`
+holds only training-metric images) and is therefore **not included here**.
+Obtain the exact file from the CivicAI author and place it at
+`vision-service/model/best.pt` (or set `YOLO_MODEL_PATH`) — the service then
+reports provider `yolo-service` with the model file name, and the UI shows a
+**REAL YOLO MODEL** chip. Until the weight is provided, the labeled
+development provider runs and is disclosed everywhere. The team should record
+the author's permission to use the weight in `HACKATHON_CHECKLIST.md`.
 
 ## Honest AI policy (important)
 
