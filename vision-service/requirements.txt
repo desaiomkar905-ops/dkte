@@ -1,0 +1,7 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+pillow>=10.0
+# NOTE: ultralytics pulls in torch. Use Python 3.11 or 3.12 and install the
+# torch build matching your platform/CPU from https://pytorch.org if needed.
+ultralytics>=8.2
