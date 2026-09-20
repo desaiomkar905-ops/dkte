@@ -46,7 +46,5 @@ console.log(`Resetting demo database (${isSqlite ? "SQLite" : "NON-SQLITE — fo
 execSync("npx prisma db push --force-reset --skip-generate", { stdio: "inherit" });
 execSync("npx tsx prisma/seed.ts", { stdio: "inherit" });
 
-console.log("\n✔ Demo state restored. Demo logins (clearly labeled in the UI):");
-console.log("    citizen@civicshield.demo / Citizen@123");
-console.log("    worker@civicshield.demo  / Worker@123");
-console.log("    official@civicshield.demo / Official@123");
+console.log("\n✔ Demo state restored. Authentication is Google sign-in only (no demo credentials).");
+console.log("    Staff dashboards: add your Google email to STAFF_EMAILS in .env, then sign in with Google.");

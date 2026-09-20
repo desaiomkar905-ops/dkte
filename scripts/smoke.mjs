@@ -3,7 +3,16 @@
  * Usage: node scripts/smoke.mjs [baseUrl]
  * Exercises: auth → submit → agent pipeline → detail → official assign →
  * worker start → evidence upload → AI verification → authz/invalid-input checks.
+ *
+ * Authentication note: production auth is Google/Firebase-only. This suite
+ * does NOT use any demo login (none exists). Instead it mints its own test
+ * session cookies locally — signed with the server's own AUTH_SECRET for real
+ * seeded user rows — an ISOLATED TEST MECHANISM that requires file access to
+ * the repo and never ships in the app. The /api/auth/google exchange path is
+ * separately covered by negative tests in section 1.
  */
+import { createSigner } from "../tests/helpers/session-signer.mjs";
+const signSession = createSigner();
 const BASE = process.argv[2] ?? "http://localhost:3100";
 
 let passed = 0;
@@ -56,15 +65,26 @@ async function main() {
 
   // ── 1. Auth ─────────────────────────────────────────────────────────────
   console.log("[1] Authentication");
-  const bad = await call("anon", "/api/auth/login", { json: { email: "official@civicshield.demo", password: "wrong" } });
-  check("wrong password rejected (401)", bad.status === 401);
+  // Google exchange endpoint: fail-closed negatives (no real Google account
+  // is available in CI; positive-path verification is a documented manual step).
+  const googleNoToken = await call("anon", "/api/auth/google", { json: {} });
+  check("google exchange without token rejected (400)", googleNoToken.status === 400, `got ${googleNoToken.status}`);
+  const googleBadToken = await call("anon", "/api/auth/google", { json: { idToken: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.fake.token" } });
+  check("google exchange rejects invalid token (401/503)", [401, 503].includes(googleBadToken.status), `got ${googleBadToken.status}`);
+  const loginRemoved = await call("anon", "/api/auth/login", { json: { email: "x@x.com", password: "y" } });
+  check("demo password login removed (404)", loginRemoved.status === 404, `got ${loginRemoved.status}`);
 
-  const official = await call("official", "/api/auth/login", { json: { email: "official@civicshield.demo", password: "Official@123" } });
-  check("official login", official.status === 200 && official.data.user.role === "OFFICIAL");
-  const citizen = await call("citizen", "/api/auth/login", { json: { email: "citizen@civicshield.demo", password: "Citizen@123" } });
-  check("citizen login", citizen.status === 200 && citizen.data.user.role === "CITIZEN");
-  const worker = await call("worker", "/api/auth/login", { json: { email: "worker@civicshield.demo", password: "Worker@123" } });
-  check("worker login", worker.status === 200 && worker.data.user.role === "WORKER");
+  // Isolated test sessions (require repo file access; not an app feature).
+  // Pre-populate the cookie jars, then verify each session resolves a live user.
+  jars.official = `cs_session=${await signSession("official@civicshield.demo", "OFFICIAL")}`;
+  jars.citizen = `cs_session=${await signSession("citizen@civicshield.demo", "CITIZEN")}`;
+  jars.worker = `cs_session=${await signSession("worker@civicshield.demo", "WORKER")}`;
+  const official = await call("official", "/api/auth/me");
+  check("official test session works", official.status === 200 && official.data.user.role === "OFFICIAL", JSON.stringify(official.data));
+  const citizen = await call("citizen", "/api/auth/me");
+  check("citizen test session works", citizen.status === 200 && citizen.data.user.role === "CITIZEN");
+  const worker = await call("worker", "/api/auth/me");
+  check("worker test session works", worker.status === 200 && worker.data.user.role === "WORKER");
 
   // ── 2. Citizen submits complaint (photo + demo vision hint) ─────────────
   console.log("[2] Complaint submission → agent pipeline");
@@ -236,7 +256,7 @@ async function main() {
   const citizenWorkers = await call("citizen", "/api/official/workers");
   check("citizen cannot list workers (403)", citizenWorkers.status === 403);
 
-  const malformed = await fetch(`${BASE}/api/auth/login`, {
+  const malformed = await fetch(`${BASE}/api/auth/google`, {
     method: "POST", headers: { "content-type": "application/json" }, body: "{not json",
   });
   check("malformed JSON handled safely (400)", malformed.status === 400, `got ${malformed.status}`);

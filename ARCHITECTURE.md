@@ -13,13 +13,13 @@ hackathon trade-off for deployability and demo reliability.
 src/
 ├── app/
 │   ├── page.tsx                     # landing (problem, pipeline, transparency)
-│   ├── login|register/              # auth screens (+ demo quick-fill)
+│   ├── login/                       # Google-only sign-in (Firebase popup)
 │   ├── citizen/                     # submit wizard + my complaints
 │   ├── official/                    # dashboard: stats, risk map, table, assign
 │   ├── worker/                      # task board + evidence submission
 │   ├── complaints/[id]/             # shared case view (all roles)
 │   └── api/                         # REST handlers (thin; logic lives in lib/)
-│       ├── auth/(login|register|logout|me)
+│       ├── auth/(google|logout|me)
 │       ├── complaints/(route, [id]/{assign,status,verify,escalate,close})
 │       ├── stats · activity · official/workers
 │       ├── cron/sla · health/ai · files/[...key]
@@ -177,10 +177,14 @@ escalates HIGH/CRITICAL or repeatedly-breaching cases.
 
 ## 7. Security
 
-- Passwords bcrypt-hashed; sessions are signed JWTs in httpOnly cookies
-  (`__Host-` prefix in production).
+- Authentication: Google sign-in via Firebase — the browser's Firebase ID
+  token is verified server-side (Firebase Admin, revocation-checked) and
+  exchanged for a signed session JWT in an httpOnly cookie (`__Host-` prefix
+  in production). No password path exists; client-sent identity claims are
+  never trusted. See AUTHENTICATION.md.
 - RBAC on every route: citizens read/write only their own complaints; workers
-  act only on assignments; officials administer. Verified in the smoke test.
+  act only on assignments; officials administer (roles are server-assigned via
+  the STAFF_EMAILS allowlist). Verified in the smoke test.
 - Input validation with zod on all bodies; upload validation (MIME
   allow-list, size cap); path-traversal-safe file serving behind auth.
 - In-memory sliding-window rate limits on login/register/submissions

@@ -1,35 +1,100 @@
 "use client";
 
-import { useState } from "react";
+/**
+ * CivicShield AI — Google-only sign-in.
+ * One primary action: Continue with Google (Firebase Auth popup flow).
+ * No email/password, no OTP, no demo accounts, no role selection.
+ */
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { api } from "@/lib/client";
 import { ErrorNote } from "@/components/ui";
 import { Logo, ShieldMark } from "@/components/Logo";
+import {
+  getFirebaseAuth,
+  googleProvider,
+  firebaseClientConfigured,
+} from "@/lib/firebase";
+import {
+  signInWithPopup,
+  signOut,
+  setPersistence,
+  browserLocalPersistence,
+  type User,
+} from "firebase/auth";
 
-const DEMO_ACCOUNTS = [
-  { label: "Citizen", email: "citizen@civicshield.demo", password: "Citizen@123" },
-  { label: "Worker", email: "worker@civicshield.demo", password: "Worker@123" },
-  { label: "Official", email: "official@civicshield.demo", password: "Official@123" },
-];
+function friendlyAuthError(err: unknown): string {
+  const code = (err as { code?: string })?.code ?? "";
+  switch (code) {
+    case "auth/popup-closed-by-user":
+    case "auth/cancelled-popup-request":
+      return "Google sign-in was cancelled.";
+    case "auth/popup-blocked":
+      return "Please allow the Google sign-in window (popups) and try again.";
+    case "auth/popup-request-pending":
+      return "A sign-in window is already open — complete or close it first.";
+    case "auth/network-request-failed":
+      return "Unable to connect. Please check your internet and try again.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please wait a moment and try again.";
+    case "auth/operation-not-allowed":
+    case "auth/unauthorized-domain":
+      return "Google sign-in is not enabled for this domain yet. Contact the operator.";
+    default:
+      return "Sign-in failed. Please try again.";
+  }
+}
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const attempted = useRef(false);
   const router = useRouter();
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  // Optional silent resume: if Firebase still has a signed-in user (e.g. the
+  // tab reloaded mid-login), exchange it without re-prompting.
+  const notConfigured = !firebaseClientConfigured();
+  useEffect(() => {
+    if (notConfigured) return;
+    const auth = getFirebaseAuth();
+    const unsub = auth.onAuthStateChanged(async (u: User | null) => {
+      if (u && !attempted.current && !busy) {
+        attempted.current = true;
+        await exchangeToken(u, { silent: true });
+      }
+    });
+    return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notConfigured]);
+
+  async function exchangeToken(fbUser: User, opts: { silent?: boolean } = {}) {
+    if (!opts.silent) setBusy(true);
+    setError("");
+    try {
+      const idToken = await fbUser.getIdToken(true); // force refresh
+      await api<{ user: { role: string } }>("/api/auth/google", { body: { idToken } });
+      router.push("/citizen");
+      router.refresh();
+    } catch (err) {
+      // Backend rejected the session — sign out of Firebase so no half-state.
+      await signOut(getFirebaseAuth()).catch(() => {});
+      if (opts.silent) return; // silent resume failures stay quiet
+      setError((err as Error).message);
+      setBusy(false);
+    }
+  }
+
+  async function handleGoogle() {
+    attempted.current = true;
     setBusy(true);
     setError("");
     try {
-      const { user } = await api<{ user: { role: string } }>("/api/auth/login", { body: { email, password } });
-      router.push(user.role === "OFFICIAL" ? "/official" : user.role === "WORKER" ? "/worker" : "/citizen");
-      router.refresh();
+      const auth = getFirebaseAuth();
+      await setPersistence(auth, browserLocalPersistence);
+      const { user } = await signInWithPopup(auth, googleProvider());
+      await exchangeToken(user);
     } catch (err) {
-      setError((err as Error).message);
+      setError(friendlyAuthError(err));
       setBusy(false);
     }
   }
@@ -50,11 +115,12 @@ export default function LoginPage() {
         <div className="relative">
           <ShieldMark size={56} />
           <h1 className="mt-6 max-w-md text-3xl font-semibold leading-tight tracking-tight">
-            From citizen complaint to <span className="text-sky-400">verified civic action.</span>
+            Report. Resolve. <span className="text-sky-400">Improve.</span>
           </h1>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-cs-muted">
-            Agents analyze each report, check duplicates, route it to the right department — and
-            verify the repair before a case can close.
+            AI-powered civic issue reporting and response — reports are analyzed,
+            deduplicated, routed to the right department, and the repair is
+            verified before a case can close.
           </p>
           <ul className="mt-8 space-y-3 text-sm text-cs-muted">
             {["AI triage with explainable severity", "Duplicate intelligence across the city", "SLA clocks with auto-escalation"].map((x) => (
@@ -68,53 +134,57 @@ export default function LoginPage() {
         <p className="relative text-xs text-cs-muted/60">CivicShield AI — original hackathon build</p>
       </div>
 
-      {/* Form panel */}
+      {/* Sign-in panel */}
       <div className="flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-6 flex justify-center lg:hidden">
             <Logo size={34} />
           </div>
-          <div className="cs-card cs-fade-up p-6">
-            <h2 className="text-lg font-semibold">Sign in</h2>
-            <p className="mt-1 text-sm text-cs-muted">Welcome back. Enter your details.</p>
-            <form onSubmit={submit} className="mt-5 space-y-4">
-              {error && <ErrorNote message={error} />}
-              <div>
-                <label htmlFor="email" className="text-sm font-medium text-slate-300">Email</label>
-                <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="cs-input mt-1.5" autoComplete="email" placeholder="you@example.com" />
-              </div>
-              <div>
-                <label htmlFor="password" className="text-sm font-medium text-slate-300">Password</label>
-                <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="cs-input mt-1.5" autoComplete="current-password" placeholder="••••••••" />
-              </div>
-              <button disabled={busy} className="cs-btn cs-btn-primary w-full">
-                {busy ? "Signing in…" : "Sign in"}
-              </button>
-            </form>
-            <p className="mt-4 text-center text-sm text-cs-muted">
-              No account? <Link href="/register" className="font-medium text-sky-400 hover:underline">Create one</Link>
+          <div className="cs-card cs-fade-up p-6 text-center">
+            <h2 className="text-lg font-semibold">CivicShield AI</h2>
+            <p className="mt-1 text-sm text-cs-muted">
+              Report. Resolve. Improve. — secure authentication to your civic account.
             </p>
-          </div>
 
-          <div className="cs-fade-up mt-4 rounded-2xl border border-violet-400/25 bg-violet-500/[0.07] p-4" style={{ animationDelay: "80ms" }}>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-violet-300">Demo accounts (seeded)</p>
-            <div className="mt-2.5 flex gap-2">
-              {DEMO_ACCOUNTS.map((a) => (
-                <button
-                  key={a.email}
-                  onClick={() => {
-                    setEmail(a.email);
-                    setPassword(a.password);
-                  }}
-                  className="cs-btn cs-btn-secondary !flex-1 !px-2 !py-1.5 !text-xs"
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
+            {error && <div className="mt-4 text-left"><ErrorNote message={error} /></div>}
+
+            {notConfigured ? (
+              <div className="mt-5 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-left text-sm text-amber-200" role="alert">
+                Google sign-in is not configured yet. Set the <code className="font-mono text-xs">NEXT_PUBLIC_FIREBASE_*</code> variables in <code className="font-mono text-xs">.env</code> and reload.
+              </div>
+            ) : (
+              <button
+                onClick={handleGoogle}
+                disabled={busy}
+                className="mt-5 flex w-full items-center justify-center gap-3 rounded-xl border border-cs-border bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {busy ? (
+                  <span className="inline-block h-4 w-4 rounded-full border-2 border-slate-300 border-t-sky-500" style={{ animation: "cs-spin 0.8s linear infinite" }} aria-hidden />
+                ) : (
+                  <GoogleG />
+                )}
+                {busy ? "Signing you in…" : "Continue with Google"}
+              </button>
+            )}
+
+            <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-cs-muted">
+              <ShieldMark size={13} /> Secure authentication · powered by Google
+            </p>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/** Official multi-brand Google "G" mark. */
+function GoogleG() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden>
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
   );
 }

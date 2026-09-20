@@ -37,8 +37,7 @@ export default async function LandingPage() {
             <a href="#honest" className="transition hover:text-cs-text">Honest AI</a>
           </nav>
           <div className="flex items-center gap-2 text-sm">
-            <Link href="/login" className="rounded-lg px-3 py-1.5 text-cs-muted transition hover:bg-white/5 hover:text-cs-text">Sign in</Link>
-            <Link href="/register" className="cs-btn cs-btn-primary !py-1.5">Get started</Link>
+            <Link href="/login" className="cs-btn cs-btn-primary !py-1.5">Sign in with Google</Link>
           </div>
         </div>
       </header>
@@ -155,16 +154,15 @@ export default async function LandingPage() {
               <li>verifier: <span className="text-sky-300">{providers.verifier}</span></li>
             </ul>
           </div>
-          <div className="rounded-[18px] border border-violet-400/25 bg-violet-500/[0.07] p-6">
-            <h3 className="font-semibold text-violet-200">Demo accounts (seeded demo data)</h3>
-            <ul className="mt-3 space-y-1.5 font-mono text-sm text-violet-200/90">
-              <li>citizen@civicshield.demo / Citizen@123</li>
-              <li>worker@civicshield.demo / Worker@123</li>
-              <li>official@civicshield.demo / Official@123</li>
-            </ul>
-            <p className="mt-3 text-xs leading-relaxed text-violet-300/80">
-              Seeded records are always marked <strong>DEMO</strong> in the UI. Everything submitted
-              during a demo is real data created in that moment.
+          <div className="rounded-[18px] border border-sky-400/25 bg-sky-500/[0.07] p-6">
+            <h3 className="font-semibold text-sky-200">Sign in with Google</h3>
+            <p className="mt-3 text-sm leading-relaxed text-sky-200/90">
+              One secure sign-in for citizens, officials and field workers — your Google account
+              is your identity. Access is verified server-side on every request.
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-sky-300/80">
+              Seeded demo records are always marked <strong>DEMO</strong> in the UI. Everything
+              submitted during a demo is real data created in that moment.
             </p>
           </div>
         </section>

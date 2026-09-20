@@ -16,14 +16,20 @@ datasource db {
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
-  passwordHash String
+  // Identity is Google/Firebase-first: verified firebaseUid is the external
+  // identity reference. passwordHash is nullable only so the previously seeded
+  // demo staff rows keep working; NO password login path exists in the app.
+  passwordHash String?
+  firebaseUid  String?  @unique
+  image        String?
   name         String
   phone        String?
-  role         String   @default("CITIZEN") // CITIZEN | WORKER | OFFICIAL
+  role         String   @default("CITIZEN") // CITIZEN | WORKER | OFFICIAL (server-assigned via staff allowlist; no signup role selection)
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id])
   karma        Int      @default(0)
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
 
   complaints         Complaint[] @relation("Reporter")
   assignedComplaints Complaint[] @relation("AssignedWorker")

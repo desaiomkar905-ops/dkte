@@ -1,8 +1,16 @@
 import { SignJWT, jwtVerify } from "jose";
-import bcrypt from "bcryptjs";
 import { prisma } from "./db";
 import { ROLES } from "./constants";
 
+/**
+ * Application session layer.
+ *
+ * Identity flow: Google sign-in happens in the browser via Firebase; the
+ * verified Firebase ID token is exchanged (POST /api/auth/google) for a
+ * short-lived CivicShield session JWT stored in an httpOnly cookie. API
+ * routes call requireUser()/requireRole() exactly as before — they never see
+ * Google specifics, and no client-supplied user id is ever trusted.
+ */
 const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET ?? "civicshield-dev-secret-change-me"
 );
@@ -14,14 +22,6 @@ export type SessionUser = {
   role: (typeof ROLES)[number];
   departmentId?: string | null;
 };
-
-export async function hashPassword(pw: string) {
-  return bcrypt.hash(pw, 10);
-}
-
-export async function verifyPassword(pw: string, hash: string) {
-  return bcrypt.compare(pw, hash);
-}
 
 export async function createSessionToken(user: SessionUser) {
   return new SignJWT({ ...user })
@@ -51,8 +51,18 @@ export function sessionCookieName() {
   return process.env.NODE_ENV === "production" ? "__Host-cs_session" : "cs_session";
 }
 
+export function sessionCookieOpts(maxAgeSeconds = 7 * 24 * 3600) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: maxAgeSeconds,
+  };
+}
+
 export async function getSessionUser(req: Request): Promise<SessionUser | null> {
-  // Authorization: Bearer header first, then cookie.
+  // Authorization: Bearer header first (session JWT), then cookie.
   const auth = req.headers.get("authorization");
   if (auth?.startsWith("Bearer ")) {
     const user = await readSessionToken(auth.slice(7));
@@ -85,11 +95,10 @@ export async function requireRole(req: Request, ...roles: SessionUser["role"][])
   return user;
 }
 
-/** Demo credentials are seeded for the hackathon demo (documented in README). */
-export async function authenticate(email: string, password: string) {
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
-  if (!user) return null;
-  const ok = await verifyPassword(password, user.passwordHash);
-  if (!ok) return null;
-  return user;
+/** Ensure the session user still exists in the database (session revocation). */
+export async function requireLiveUser(req: Request): Promise<SessionUser> {
+  const session = await requireUser(req);
+  const exists = await prisma.user.findUnique({ where: { id: session.id }, select: { id: true } });
+  if (!exists) throw new ApiError(401, "Session no longer valid");
+  return session;
 }

@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { fetchMe, api, type SessionUser } from "@/lib/client";
 import { LANGS, useLang } from "@/lib/i18n";
 import { Logo } from "./Logo";
+import { getFirebaseAuth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
 
 type NavItem = { href: string; label: string; icon: string };
 
@@ -39,8 +41,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function logout() {
+    // Sign out of both layers: Firebase (browser) + our session cookie (server).
+    await signOut(getFirebaseAuth()).catch(() => {});
     await api("/api/auth/logout", { method: "POST" });
-    router.push("/");
+    router.push("/login");
     router.refresh();
   }
 
@@ -142,7 +146,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <footer className="border-t border-cs-border px-4 py-5 text-center text-xs text-cs-muted/70">
-        CivicShield AI — original hackathon build. Demo credentials are clearly marked in the UI and README.
+        CivicShield AI — original hackathon build. Secure Google sign-in.
       </footer>
     </div>
   );

@@ -1,11 +1,17 @@
 /**
  * CivicShield AI seed.
- * Creates departments, demo accounts, and a handful of DEMO complaints
- * (source: "DEMO", always labeled in the UI) so the dashboard/map are not
- * empty during the hackathon demo. Citizen-created data is never faked.
+ * Creates departments, a minimal set of staff users (assignment targets for
+ * the dashboards), and a handful of DEMO complaints (source: "DEMO", always
+ * labeled in the UI) so the dashboard/map are not empty during the demo.
+ *
+ * Authentication is Google/Firebase-only: NO login credentials are seeded or
+ * printed. Staff accounts here exist only as assignment targets and are
+ * claimed automatically when a real Google account with a matching
+ * STAFF_EMAILS entry signs in for the first time. Citizen sign-ups happen
+ * exclusively through Google sign-in.
  */
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -24,50 +30,53 @@ async function main() {
     await prisma.department.upsert({ where: { code: d.code }, update: {}, create: d });
   }
 
-  const hash = (pw: string) => bcrypt.hashSync(pw, 10);
-
   const pwd = await prisma.department.findUnique({ where: { code: "PWD" } });
   const swm = await prisma.department.findUnique({ where: { code: "SWM" } });
   const elect = await prisma.department.findUnique({ where: { code: "ELECT" } });
 
+  // Unusable random hash — these rows are staff assignment targets only.
+  // Real people claim them by signing in with a matching STAFF_EMAILS Google
+  // account (email-based linking on first login).
+  const unusable = () => `!disabled:${randomUUID()}`;
+
   const official = await prisma.user.upsert({
     where: { email: "official@civicshield.demo" },
-    update: {},
+    update: { passwordHash: unusable() },
     create: {
-      email: "official@civicshield.demo", name: "Demo Official", passwordHash: hash("Official@123"),
-      role: "OFFICIAL", phone: "9000000001",
+      email: "official@civicshield.demo", name: "Demo Official",
+      passwordHash: unusable(), role: "OFFICIAL", phone: "9000000001",
     },
   });
   const worker1 = await prisma.user.upsert({
     where: { email: "worker@civicshield.demo" },
-    update: {},
+    update: { passwordHash: unusable() },
     create: {
-      email: "worker@civicshield.demo", name: "Demo Worker (Roads)", passwordHash: hash("Worker@123"),
-      role: "WORKER", phone: "9000000002", departmentId: pwd?.id,
+      email: "worker@civicshield.demo", name: "Demo Worker (Roads)",
+      passwordHash: unusable(), role: "WORKER", phone: "9000000002", departmentId: pwd?.id,
     },
   });
   const worker2 = await prisma.user.upsert({
     where: { email: "worker2@civicshield.demo" },
-    update: {},
+    update: { passwordHash: unusable() },
     create: {
-      email: "worker2@civicshield.demo", name: "Demo Worker (Sanitation)", passwordHash: hash("Worker@123"),
-      role: "WORKER", phone: "9000000003", departmentId: swm?.id,
+      email: "worker2@civicshield.demo", name: "Demo Worker (Sanitation)",
+      passwordHash: unusable(), role: "WORKER", phone: "9000000003", departmentId: swm?.id,
     },
   });
   const citizen = await prisma.user.upsert({
     where: { email: "citizen@civicshield.demo" },
-    update: {},
+    update: { passwordHash: unusable() },
     create: {
-      email: "citizen@civicshield.demo", name: "Demo Citizen", passwordHash: hash("Citizen@123"),
-      role: "CITIZEN", phone: "9000000004", karma: 20,
+      email: "citizen@civicshield.demo", name: "Demo Citizen",
+      passwordHash: unusable(), role: "CITIZEN", phone: "9000000004", karma: 20,
     },
   });
   await prisma.user.upsert({
     where: { email: "worker3@civicshield.demo" },
-    update: {},
+    update: { passwordHash: unusable() },
     create: {
-      email: "worker3@civicshield.demo", name: "Demo Worker (Electrical)", passwordHash: hash("Worker@123"),
-      role: "WORKER", phone: "9000000005", departmentId: elect?.id,
+      email: "worker3@civicshield.demo", name: "Demo Worker (Electrical)",
+      passwordHash: unusable(), role: "WORKER", phone: "9000000005", departmentId: elect?.id,
     },
   });
 
@@ -176,11 +185,8 @@ async function main() {
   }
 
   console.log("Seed complete.");
-  console.log("Demo logins (documented in README, clearly marked as demo):");
-  console.log("  citizen  citizen@civicshield.demo / Citizen@123");
-  console.log("  worker   worker@civicshield.demo  / Worker@123");
-  console.log("  official official@civicshield.demo / Official@123");
-  console.log(`Users seeded: official=${official.id} worker1=${worker1.id} citizen=${citizen.id}`);
+  console.log("No login credentials are seeded — authentication is Google sign-in only.");
+  console.log(`Staff assignment targets seeded: official=${official.id} worker1=${worker1.id} citizen=${citizen.id}`);
 }
 
 main()

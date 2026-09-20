@@ -13,6 +13,8 @@
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1136.0",
     "bcryptjs": "^3.0.3",
+    "firebase": "^12.19.0",
+    "firebase-admin": "^14.4.0",
     "jose": "^6.2.12",
     "leaflet": "^1.9.4",
     "next": "16.3.5",

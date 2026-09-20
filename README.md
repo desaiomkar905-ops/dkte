@@ -62,8 +62,8 @@ See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for the full design, and
 | AI — reasoning | **Amazon Bedrock** (Claude) | labeled deterministic rule-based provider without AWS credentials |
 | Storage | Local disk driver behind a storage abstraction | S3 driver is a documented extension point |
 | Map | **Leaflet + OpenStreetMap** (react-leaflet) | severity-coded risk map |
-| Auth | JWT session cookies (jose) + bcrypt, role-based (Citizen / Worker / Official) | zod validation, rate limiting, upload validation |
-| Tests | Vitest (unit) + end-to-end smoke script (`scripts/smoke.mjs`) | 23 unit tests, 56 e2e checks |
+| Auth | **Google sign-in via Firebase Auth** — ID token verified server-side (Firebase Admin), CivicShield session JWT in httpOnly cookie | zod validation, rate limiting, upload validation; see [AUTHENTICATION.md](./AUTHENTICATION.md) |
+| Tests | Vitest (unit) + end-to-end smoke script (`scripts/smoke.mjs`) | 31 unit tests, 58 e2e checks |
 
 ## Setup
 
@@ -73,6 +73,13 @@ cp .env.example .env          # fill values (see below)
 npm run demo:reset            # create SQLite DB + seed clearly-marked DEMO data
 npm run dev                   # http://localhost:3000
 ```
+
+Authentication is **Google sign-in only** (Firebase). Fill the
+`NEXT_PUBLIC_FIREBASE_*` vars plus one server-side Admin credential, then
+sign in at `/login`. Full setup: [AUTHENTICATION.md](./AUTHENTICATION.md).
+Every Google user is a normal citizen; add your Google email to
+`STAFF_EMAILS` in `.env` to reach the official/worker dashboards
+(server-side mapping — there is no signup role selection).
 
 `npm run demo:reset` (safe dev-only command) resets the local SQLite database
 to the seeded demo state — it refuses to run against non-SQLite URLs unless
@@ -92,7 +99,10 @@ uvicorn main:app --port 8000
 | Variable | Required | Purpose |
 |---|---|---|
 | `DATABASE_URL` | yes | SQLite `file:./dev.db` (or Supabase Postgres URL) |
-| `AUTH_SECRET` | yes in prod | JWT session signing secret |
+| `AUTH_SECRET` | yes | JWT session signing secret |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` / `AUTH_DOMAIN` / `PROJECT_ID` / `STORAGE_BUCKET` / `MESSAGING_SENDER_ID` / `APP_ID` | yes | Firebase web config for Google sign-in (public identifiers, not secrets) |
+| `FIREBASE_SERVICE_ACCOUNT_B64` (or `_PATH` / `GOOGLE_APPLICATION_CREDENTIALS`) | yes | server-side Firebase Admin credential — never commit |
+| `STAFF_EMAILS` | no | server-side staff mapping `email:ROLE[:DEPT],…` (no UI role selection) |
 | `MAX_UPLOAD_MB` | no (default 8) | upload size limit |
 | `YOLO_SERVICE_URL` | no | enables the real YOLOv8 vision path |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` | no | enables Bedrock LLM triage |
@@ -102,21 +112,19 @@ uvicorn main:app --port 8000
 | `DEMO_MODE` | no | set `false` to disable the labeled ⏰ DEMO SLA controls; production builds refuse them unless `DEMO_MODE=true` |
 | `RATE_LIMIT_MULTIPLIER` | no (default 1) | dev-only limiter scaling for test runs — never set in production |
 
-No secrets are committed; `.env*` is gitignored. Demo credentials are seeded
-**for the hackathon demo only** and clearly labeled everywhere:
-
-- `citizen@civicshield.demo` / `Citizen@123`
-- `worker@civicshield.demo` / `Worker@123`
-- `official@civicshield.demo` / `Official@123`
+No secrets are committed; `.env*` is gitignored. There are **no demo login
+credentials** — authentication is real Google sign-in via Firebase. Seeded
+staff rows exist only as assignment targets and are claimed automatically on
+first login by a matching `STAFF_EMAILS` Google account.
 
 ### Running & deployment
 
 ```bash
 npm run dev        # local development
-npm run build      # production build (passes: 26 routes)
+npm run build      # production build (passes)
 npm run lint       # eslint (clean)
-npm test           # unit tests (23 passing)
-node scripts/smoke.mjs http://localhost:3100   # end-to-end checks (56) against a running server
+npm test           # unit tests (31 passing)
+node scripts/smoke.mjs http://localhost:3100   # end-to-end checks (58) against a running server
 ```
 
 Deploy targets: Vercel (web app) + any Postgres (Supabase) + the vision

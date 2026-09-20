@@ -32,7 +32,9 @@ are never faked silently — say this out loud.
 
 ## Act 1 — Citizen reports a pothole (90s)
 
-1. Sign in as **Citizen** (demo quick-fill button on the login page).
+1. Sign in with **Continue with Google** (real Firebase authentication). For
+   the citizen/official/worker windows use three Google accounts whose emails
+   are listed in `STAFF_EMAILS` (citizen = any other Google account).
 2. Click **Report an Issue**.
 3. Attach the pothole photo. If the dev vision provider is active, an amber
    *"Simulated vision"* box appears — pick **Pothole** from it and say:
@@ -58,7 +60,8 @@ decision is persisted and auditable.
 
 ## Act 2 — Official dashboard (60s)
 
-8. In the second window, sign in as **Official**.
+8. In the second window, sign in with Google as an **OFFICIAL** account (its
+   email is listed in `STAFF_EMAILS` with `:OFFICIAL`).
 9. Show the stat cards (Total / Open / In Progress / Verification / Resolved
    / Overdue / Escalated) and the **Civic Risk Map** — severity-colored
    markers, DEMO badges on seeded records.
@@ -119,8 +122,9 @@ Nothing is faked silently: every adjustment is disclosed in the timeline.
   matches are *linked* as "potentially related", not re-created.
 - **SLA?** Severity-based hours (12/24/48/72, env-tunable), overdue sweep on
   dashboard load + `/api/cron/sla` for schedulers, escalation history.
-- **Auth?** JWT httpOnly cookies, bcrypt, three roles, verified 401/403 paths.
+- **Auth?** Real Google sign-in via Firebase; the ID token is verified
+  server-side before a session cookie is issued; verified 401/403 paths.
 - **Is the data real?** Seeded records are permanently badged `DEMO`;
   submissions made during the demo are genuine records in the database.
-- **Tests?** 23 unit tests + a 56-check end-to-end smoke script
+- **Tests?** 31 unit tests + a 58-check end-to-end smoke script
   (`node scripts/smoke.mjs http://localhost:3100`) + lint/typecheck/build.
