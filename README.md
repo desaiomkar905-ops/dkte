@@ -63,17 +63,20 @@ See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for the full design, and
 | Storage | Local disk driver behind a storage abstraction | S3 driver is a documented extension point |
 | Map | **Leaflet + OpenStreetMap** (react-leaflet) | severity-coded risk map |
 | Auth | JWT session cookies (jose) + bcrypt, role-based (Citizen / Worker / Official) | zod validation, rate limiting, upload validation |
-| Tests | Vitest (unit) + end-to-end smoke script (`scripts/smoke.mjs`) | 23 unit tests, 37 e2e checks |
+| Tests | Vitest (unit) + end-to-end smoke script (`scripts/smoke.mjs`) | 23 unit tests, 56 e2e checks |
 
 ## Setup
 
 ```bash
 npm install
 cp .env.example .env          # fill values (see below)
-npx prisma db push            # create SQLite database
-npx prisma db seed            # departments + clearly-marked DEMO data
+npm run demo:reset            # create SQLite DB + seed clearly-marked DEMO data
 npm run dev                   # http://localhost:3000
 ```
+
+`npm run demo:reset` (safe dev-only command) resets the local SQLite database
+to the seeded demo state — it refuses to run against non-SQLite URLs unless
+`--force` is passed. Re-run it between demo rehearsals.
 
 Optional real vision:
 
@@ -96,6 +99,8 @@ uvicorn main:app --port 8000
 | `BEDROCK_MODEL_ID` | no (default claude-3-haiku) | Bedrock model |
 | `SLA_HOURS_CRITICAL/HIGH/MEDIUM/LOW` | no (12/24/48/72) | SLA policy |
 | `CRON_SECRET` | no | protects `/api/cron/sla` scheduled sweeps |
+| `DEMO_MODE` | no | set `false` to disable the labeled ⏰ DEMO SLA controls; production builds refuse them unless `DEMO_MODE=true` |
+| `RATE_LIMIT_MULTIPLIER` | no (default 1) | dev-only limiter scaling for test runs — never set in production |
 
 No secrets are committed; `.env*` is gitignored. Demo credentials are seeded
 **for the hackathon demo only** and clearly labeled everywhere:
@@ -111,7 +116,7 @@ npm run dev        # local development
 npm run build      # production build (passes: 26 routes)
 npm run lint       # eslint (clean)
 npm test           # unit tests (23 passing)
-node scripts/smoke.mjs http://localhost:3100   # end-to-end checks (37) against a running server
+node scripts/smoke.mjs http://localhost:3100   # end-to-end checks (56) against a running server
 ```
 
 Deploy targets: Vercel (web app) + any Postgres (Supabase) + the vision

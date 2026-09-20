@@ -83,6 +83,7 @@ model Complaint {
   verified               Boolean?
   verificationConfidence Float?
   verificationReason     String?
+  verificationProvider   String? // which AI provider produced the verdict (transparency)
   verifiedAt             DateTime?
 
   escalationCount Int @default(0)

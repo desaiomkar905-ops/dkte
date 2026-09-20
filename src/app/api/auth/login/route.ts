@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authenticate, createSessionToken, sessionCookieName } from "@/lib/auth";
-import { handleRouteError, jsonError, rateLimit, clientKey } from "@/lib/api";
+import { handleRouteError, jsonError, rateLimit, clientKey, readJson } from "@/lib/api";
 
 const bodySchema = z.object({
   email: z.string().trim().email().max(120),
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     if (!rateLimit(clientKey(req, "login"), 10, 60_000)) {
       return jsonError(429, "Too many login attempts. Wait a minute and retry.");
     }
-    const { email, password } = bodySchema.parse(await req.json());
+    const { email, password } = bodySchema.parse(await readJson(req));
     const user = await authenticate(email, password);
     if (!user) return jsonError(401, "Invalid email or password");
 

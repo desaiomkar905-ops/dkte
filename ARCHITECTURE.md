@@ -211,7 +211,22 @@ Transcribe) is a documented provider-slot extension.
   input, bad file type, cron protection.
 - **Static** — `tsc --noEmit`, ESLint, `next build` (26 routes).
 
-## 10. Known trade-offs (hackathon scope)
+## 10. Demo controls (labeled, dev-only)
+
+Two mechanisms exist purely for reliable judging, both transparent by design:
+
+- **`npm run demo:reset`** — resets the local SQLite dev database to the
+  seeded demo state. Guarded: refuses non-SQLite `DATABASE_URL` targets
+  unless `--force` is passed, so a production Postgres URL cannot be wiped
+  accidentally.
+- **`POST /api/demo/sla`** — officials-only SLA simulation (*deadline
+  approaching* / *breach*). Disabled when `DEMO_MODE=false` and refused by
+  production builds unless `DEMO_MODE=true`. Every use writes a labeled
+  timeline event ("⏰ DEMO MODE: SLA clock …") and an SLAAgent activity entry;
+  breach mode triggers the genuine overdue sweep, so what judges see
+  (OVERDUE flag → escalation → history) is the real production code path.
+
+## 11. Known trade-offs (hackathon scope)
 
 - Local disk storage instead of S3 (abstraction in place).
 - In-process rate limiting (single node).

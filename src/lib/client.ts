@@ -44,3 +44,13 @@ export function fmtAgo(d: string | Date | null | undefined) {
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
 }
+
+/** Countdown for FUTURE deadlines ("4h left") — fmtAgo is for past events. */
+export function fmtCountdown(d: string | Date | null | undefined) {
+  if (!d) return "—";
+  const s = Math.floor((new Date(d).getTime() - Date.now()) / 1000);
+  if (s <= 0) return "breached";
+  if (s < 3600) return `${Math.max(1, Math.floor(s / 60))}m left`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h left`;
+  return `${Math.floor(s / 86400)}d left`;
+}

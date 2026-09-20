@@ -97,6 +97,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           verified: true,
           verificationConfidence: verdict.confidence,
           verificationReason: verdict.reason,
+          verificationProvider: verdict.provider,
           verifiedAt: new Date(),
           resolvedAt: new Date(),
           isOverdue: false,
@@ -130,6 +131,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         verified: false,
         verificationConfidence: verdict.confidence,
         verificationReason: verdict.reason,
+        verificationProvider: verdict.provider,
         reopenedCount,
       },
     });

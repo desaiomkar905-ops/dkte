@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, ApiError } from "@/lib/auth";
-import { handleRouteError, jsonError } from "@/lib/api";
+import { handleRouteError, jsonError, readJson } from "@/lib/api";
 import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -12,7 +12,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const user = await requireUser(req);
     const { id } = await params;
-    const { action } = bodySchema.parse(await req.json());
+    const { action } = bodySchema.parse(await readJson(req));
 
     const complaint = await prisma.complaint.findUnique({ where: { id } });
     if (!complaint) return jsonError(404, "Complaint not found");

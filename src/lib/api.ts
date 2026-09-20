@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiError } from "./auth";
 import { ZodError } from "zod";
-
 /** Uniform JSON error handling for all route handlers. */
 export function jsonError(status: number, message: string, extra?: Record<string, unknown>) {
   return NextResponse.json({ error: message, ...extra }, { status });
@@ -18,17 +17,31 @@ export function handleRouteError(err: unknown) {
   return jsonError(500, "Internal server error");
 }
 
+/** Safely parse a JSON body — malformed bodies are a client error (400), not a 500. */
+export async function readJson(req: Request): Promise<unknown> {
+  try {
+    return await req.json();
+  } catch {
+    throw new ApiError(400, "Malformed JSON body");
+  }
+}
+
 /**
  * Simple in-memory sliding-window rate limiter.
  * Good enough for a single-node demo; a production deployment would use
  * a shared store (e.g. Redis). Documented in ARCHITECTURE.md.
+ *
+ * RATE_LIMIT_MULTIPLIER scales all limits for local test/demo runs
+ * (default 1). It is a dev convenience only and is not set in production.
  */
+const LIMIT_MULTIPLIER = Math.max(1, Number(process.env.RATE_LIMIT_MULTIPLIER ?? 1));
 const buckets = new Map<string, number[]>();
 
 export function rateLimit(key: string, limit: number, windowMs: number): boolean {
+  const effectiveLimit = Math.max(1, Math.round(limit * LIMIT_MULTIPLIER));
   const now = Date.now();
   const arr = (buckets.get(key) ?? []).filter((t) => now - t < windowMs);
-  if (arr.length >= limit) return false;
+  if (arr.length >= effectiveLimit) return false;
   arr.push(now);
   buckets.set(key, arr);
   return true;

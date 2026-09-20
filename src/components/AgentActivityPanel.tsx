@@ -25,7 +25,11 @@ const AGENT_TONE: Record<string, string> = {
 
 /**
  * Agent Activity panel — generated from the persisted AgentActivity table
- * (server-side decisions), not from client-side theater.
+ * (server-side decisions), never from client-side theater. Each entry shows
+ * the agent, the tool action, a concise result, the timestamp, and — where a
+ * model was involved — which provider produced it. Decision *factors* are
+ * shown as bullets; hidden chain-of-thought is never displayed because none
+ * is stored.
  */
 export function AgentActivityPanel({ activities, title = "Agent Activity" }: { activities: Activity[]; title?: string }) {
   return (
@@ -36,8 +40,13 @@ export function AgentActivityPanel({ activities, title = "Agent Activity" }: { a
       ) : (
         <ol className="mt-3 space-y-3">
           {activities.map((a) => (
-            <li key={a.id} className="flex gap-3">
-              <div className="mt-1 h-full w-px shrink-0 bg-slate-200" aria-hidden />
+            <li key={a.id} className="flex gap-2.5">
+              <span
+                aria-hidden
+                className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-50 text-[11px] font-bold text-emerald-600 ring-1 ring-emerald-200"
+              >
+                ✓
+              </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`inline-flex rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ${AGENT_TONE[a.agent] ?? "bg-slate-100 text-slate-600 ring-slate-200"}`}>
@@ -58,20 +67,53 @@ export function AgentActivityPanel({ activities, title = "Agent Activity" }: { a
   );
 }
 
+type ActivityDetail = {
+  reasons?: string[];
+  reasoning?: string[];
+  provider?: string;
+  note?: string;
+  match?: { reasons?: string[] };
+};
+
 function Reasons({ detail }: { detail: string }) {
-  let reasons: string[] | undefined;
+  let parsed: ActivityDetail | null = null;
   try {
-    const parsed = JSON.parse(detail) as { reasons?: string[]; reasoning?: string[] };
-    reasons = parsed.reasons ?? parsed.reasoning;
+    parsed = JSON.parse(detail) as ActivityDetail;
   } catch {
     return null;
   }
-  if (!reasons?.length) return null;
+  const provider = parsed?.provider;
+  const note = parsed?.note;
+  const reasons = parsed?.reasons ?? parsed?.reasoning ?? parsed?.match?.reasons;
+  const showProvider = provider ? true : false;
+
+  if (!showProvider && !note && !reasons?.length) return null;
+
   return (
-    <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-slate-500">
-      {reasons.map((r, i) => (
-        <li key={i}>{r}</li>
-      ))}
-    </ul>
+    <div className="mt-1">
+      {showProvider && <ProviderChip provider={provider as string} />}
+      {note && <p className="text-xs italic text-slate-400">{note}</p>}
+      {reasons && reasons.length > 0 && (
+        <ul className="list-disc space-y-0.5 pl-5 text-xs text-slate-500">
+          {reasons.map((r: string, i: number) => (
+            <li key={i}>{r}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ProviderChip({ provider }: { provider: string }) {
+  const isDev = provider.startsWith("dev");
+  return (
+    <span
+      title={isDev ? "Labeled development provider — not a real model inference" : "Production AI provider"}
+      className={`mr-2 inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ${
+        isDev ? "bg-amber-50 text-amber-700 ring-amber-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+      }`}
+    >
+      AI Provider: {provider}{isDev ? " (dev)" : ""}
+    </span>
   );
 }

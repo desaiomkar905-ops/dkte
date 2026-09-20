@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
-import { handleRouteError, jsonError } from "@/lib/api";
+import { handleRouteError, jsonError, readJson } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { escalateComplaint } from "@/lib/agent/tools";
 
@@ -13,7 +13,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     await requireRole(req, "OFFICIAL");
     const { id } = await params;
-    const { reason } = bodySchema.parse(await req.json());
+    const { reason } = bodySchema.parse(await readJson(req));
 
     const complaint = await prisma.complaint.findUnique({ where: { id } });
     if (!complaint) return jsonError(404, "Complaint not found");

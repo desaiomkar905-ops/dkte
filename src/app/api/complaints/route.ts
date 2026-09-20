@@ -21,8 +21,10 @@ export async function POST(req: Request) {
     const raw = {
       description: String(form.get("description") ?? ""),
       category: (form.get("categoryHint") as string) || undefined,
-      lat: Number(form.get("lat")),
-      lng: Number(form.get("lng")),
+      // Only coerce when actually provided — Number(null) is 0, which would
+      // silently place complaints at lat 0, lng 0 instead of failing validation.
+      lat: form.has("lat") && form.get("lat") !== "" ? Number(form.get("lat")) : undefined,
+      lng: form.has("lng") && form.get("lng") !== "" ? Number(form.get("lng")) : undefined,
       address: (form.get("address") as string) || undefined,
       ward: (form.get("ward") as string) || undefined,
       language: (form.get("language") as string) || "en",

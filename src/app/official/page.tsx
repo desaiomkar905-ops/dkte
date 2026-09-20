@@ -6,7 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { Card, StatCard, StatusBadge, SeverityBadge, CategoryTag, DemoBadge, Spinner, LoginPrompt, ErrorNote } from "@/components/ui";
 import { AgentActivityPanel, type Activity } from "@/components/AgentActivityPanel";
 import MapPanel from "@/components/MapPanel";
-import { api, fetchMe, fmtAgo, type SessionUser } from "@/lib/client";
+import { api, fetchMe, fmtAgo, fmtCountdown, type SessionUser } from "@/lib/client";
 import { CATEGORIES, STATUSES, DEPARTMENT_CODES, categoryLabels, statusLabels } from "@/lib/constants";
 
 type Row = {
@@ -28,6 +28,8 @@ export default function OfficialDashboard() {
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({ status: "", category: "", severity: "", department: "" });
   const [assigning, setAssigning] = useState<Row | null>(null);
+  const [slaDemo, setSlaDemo] = useState<Row | null>(null);
+  const [demoMode, setDemoMode] = useState(false);
   const [actionError, setActionError] = useState("");
 
   const load = useCallback(async () => {
@@ -53,6 +55,7 @@ export default function OfficialDashboard() {
       if (u.role !== "OFFICIAL") { window.location.href = u.role === "WORKER" ? "/worker" : "/citizen"; return; }
       setMe(u);
       load();
+      fetch("/api/health/ai").then((r) => r.json()).then((d) => setDemoMode(Boolean(d.demoMode))).catch(() => {});
       api<{ users: Worker[] }>("/api/official/workers").then((d) => setWorkers(d.users)).catch(() => {});
     });
   }, [load]);
@@ -84,6 +87,17 @@ export default function OfficialDashboard() {
     setActionError("");
     try {
       await api(`/api/complaints/${row.id}/escalate`, { body: { reason: "Manual escalation by official from dashboard" } });
+      await load();
+    } catch (e) {
+      setActionError((e as Error).message);
+    }
+  }
+
+  async function demoSla(row: Row, mode: "warning" | "breach") {
+    setActionError("");
+    try {
+      await api("/api/demo/sla", { body: { complaintId: row.id, mode } });
+      setSlaDemo(null);
       await load();
     } catch (e) {
       setActionError((e as Error).message);
@@ -182,7 +196,7 @@ export default function OfficialDashboard() {
                       {r.escalationCount > 0 && <div className="mt-0.5 text-xs text-rose-500">esc. L{r.escalationCount}</div>}
                     </td>
                     <td className="px-4 py-3">
-                      {r.isOverdue ? <span className="font-semibold text-rose-600">OVERDUE</span> : r.slaDueAt ? <span className="text-slate-500">{fmtAgo(r.slaDueAt).replace(" ago", " left")}</span> : "—"}
+                      {r.isOverdue ? <span className="font-semibold text-rose-600">OVERDUE</span> : r.slaDueAt ? <span className="text-slate-500">{fmtCountdown(r.slaDueAt)}</span> : "—"}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-400">{fmtAgo(r.createdAt)}</td>
                     <td className="px-4 py-3">
@@ -197,6 +211,11 @@ export default function OfficialDashboard() {
                             Escalate
                           </button>
                         )}
+                        {demoMode && !["RESOLVED", "CLOSED"].includes(r.status) && (
+                          <button onClick={() => setSlaDemo(r)} title="DEMO MODE: simulate the SLA clock for judging" className="rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100">
+                            ⏰ DEMO SLA
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -209,6 +228,31 @@ export default function OfficialDashboard() {
         {/* Agent activity */}
         <AgentActivityPanel activities={activities} title="Agent Activity — latest decisions" />
       </div>
+
+      {/* DEMO MODE SLA simulation modal — labeled, dev-only control */}
+      {slaDemo && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-4" role="dialog" aria-modal="true">
+          <Card className="w-full max-w-md p-5">
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-300">DEMO / DEVELOPMENT MODE</span>
+            <h3 className="mt-2 font-semibold text-slate-900">Simulate SLA clock — {slaDemo.refCode}</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Moves this complaint&apos;s SLA deadline so judges can see warning → overdue → escalation without waiting hours.
+              Every adjustment is labeled in the case timeline; production builds refuse this endpoint.
+            </p>
+            <div className="mt-4 grid gap-2">
+              <button onClick={() => demoSla(slaDemo, "warning")} className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-left text-sm font-medium text-amber-800 hover:bg-amber-100">
+                ⏳ Simulate &quot;deadline approaching&quot; (15 minutes left)
+              </button>
+              <button onClick={() => demoSla(slaDemo, "breach")} className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-left text-sm font-medium text-rose-700 hover:bg-rose-100">
+                🔥 Simulate &quot;SLA breached&quot; (1 hour past due → overdue sweep → escalation)
+              </button>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setSlaDemo(null)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm">Cancel</button>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Assignment modal */}
       {assigning && (

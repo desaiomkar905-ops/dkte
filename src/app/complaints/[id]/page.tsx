@@ -11,7 +11,7 @@ type ComplaintDetail = {
   priority: number; status: string; source: string; lat: number; lng: number; address: string | null;
   ward: string | null; language: string; transcript: string | null; aiConfidence: number | null; aiSummary: string | null;
   photoUrl: string | null; resolutionUrl: string | null; slaHours: number | null; slaDueAt: string | null;
-  isOverdue: boolean; verified: boolean | null; verificationConfidence: number | null; verificationReason: string | null;
+  isOverdue: boolean; verified: boolean | null; verificationConfidence: number | null; verificationReason: string | null; verificationProvider: string | null;
   verifiedAt: string | null; escalationCount: number; reopenedCount: number; duplicateOf: { refCode: string } | null;
   duplicates: Array<{ refCode: string }>; createdAt: string; assignedAt: string | null; startedAt: string | null;
   submittedAt: string | null; resolvedAt: string | null;
@@ -105,11 +105,18 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
           {c.verified != null && (
             <Card className={`p-4 ${c.verified ? "border-emerald-200 bg-emerald-50" : "border-orange-200 bg-orange-50"}`}>
               <h3 className={`text-sm font-semibold ${c.verified ? "text-emerald-800" : "text-orange-800"}`}>
-                {c.verified ? "✓ AI verified this resolution" : "↺ AI did not verify — complaint was reopened"}
+                {c.verified ? "✓ RESOLUTION VERIFIED by AI" : "↺ RESOLUTION NOT VERIFIED — complaint reopened"}
               </h3>
               <p className="mt-1 text-sm text-slate-700">{c.verificationReason}</p>
-              {c.verificationConfidence != null && (
-                <p className="mt-1 text-xs text-slate-500">Confidence {(c.verificationConfidence * 100).toFixed(0)}% · verified at {fmtDateTime(c.verifiedAt)}</p>
+              <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                <span>Confidence: <strong className="text-slate-700">{c.verificationConfidence != null ? `${(c.verificationConfidence * 100).toFixed(0)}%` : "—"}</strong></span>
+                {c.verificationProvider && <span>AI Provider: <strong className="text-slate-700">{c.verificationProvider}</strong>{c.verificationProvider.startsWith("dev") && " (labeled development provider)"}</span>}
+                <span>at {fmtDateTime(c.verifiedAt)}</span>
+              </p>
+              {!c.verified && (
+                <p className="mt-1 text-xs text-orange-700">
+                  The worker&apos;s claim alone cannot close a case — the issue was reopened and, for high-severity or repeated failures, escalated.
+                </p>
               )}
             </Card>
           )}

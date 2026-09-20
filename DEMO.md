@@ -9,9 +9,14 @@ through the real pipeline.
 ```bash
 npm install
 cp .env.example .env
-npx prisma db push && npx prisma db seed
+npm run demo:reset     # creates a clean, clearly-labeled demo database
 npm run dev            # http://localhost:3000
 ```
+
+`npm run demo:reset` wipes **only the local SQLite dev database** defined by
+`DATABASE_URL` (it refuses to touch non-SQLite URLs unless you pass `--force`)
+and re-seeds departments, demo accounts, and DEMO-marked records. Use it
+between rehearsals so the demo always starts from a known state.
 
 Have two windows (or split-screen): one **incognito/private** window and one
 normal window, so you can show citizen and official sessions side by side.
@@ -78,6 +83,21 @@ than before — consistent with a filled/dried issue"` — and the complaint
 becomes **RESOLVED**. State plainly: *"a worker's 'done' button alone never
 closes a case."*
 
+## Act 3.5 — SLA demo without waiting hours (30s)
+
+On the official dashboard, any active row has an amber **⏰ DEMO SLA** button
+(dev mode only; production builds refuse it). It opens a clearly labeled
+*DEMO / DEVELOPMENT MODE* dialog with two options:
+
+- **Deadline approaching** — SLA countdown flips to *15m left* (warning state).
+- **SLA breached** — sets the clock 1h past due and runs the same overdue
+  sweep production would run on schedule: row flags **OVERDUE**, the HIGH
+  severity case auto-**escalates**, the Overdue/Escalated stat cards update,
+  and the case timeline records a labeled
+  *"⏰ DEMO MODE: SLA clock …"* event plus an SLAAgent log entry.
+
+Nothing is faked silently: every adjustment is disclosed in the timeline.
+
 ## Act 4 — The failure path (30s, optional but powerful)
 
 16. Submit a second complaint as citizen (e.g. **Overflowing Waste**).
@@ -102,5 +122,5 @@ closes a case."*
 - **Auth?** JWT httpOnly cookies, bcrypt, three roles, verified 401/403 paths.
 - **Is the data real?** Seeded records are permanently badged `DEMO`;
   submissions made during the demo are genuine records in the database.
-- **Tests?** 23 unit tests + a 37-check end-to-end smoke script
+- **Tests?** 23 unit tests + a 56-check end-to-end smoke script
   (`node scripts/smoke.mjs http://localhost:3100`) + lint/typecheck/build.

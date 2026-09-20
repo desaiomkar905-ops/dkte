@@ -30,10 +30,21 @@ export function getResolutionVerifier(): ResolutionVerifier {
   return url ? new YoloResolutionVerifier(url) : new DevResolutionVerifier();
 }
 
+/**
+ * Judge-friendly provider status. Every string states plainly whether a
+ * production model or a labeled development provider is active, and how to
+ * enable the production path.
+ */
 export function aiProviderStatus() {
   return {
-    vision: process.env.YOLO_SERVICE_URL ? "yolo-service" : "dev:hint (labeled fallback)",
-    llm: process.env.AWS_ACCESS_KEY_ID ? "bedrock" : "dev:rules (labeled fallback)",
-    verifier: process.env.YOLO_SERVICE_URL ? "yolo-service" : "dev:heuristic (labeled fallback)",
+    vision: process.env.YOLO_SERVICE_URL
+      ? "YOLOv8 vision service (production)"
+      : "Development vision provider (labeled) — connect YOLO_SERVICE_URL for real inference",
+    llm: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+      ? "Amazon Bedrock (production)"
+      : "Development rule-based provider (labeled) — add AWS credentials for Amazon Bedrock",
+    verifier: process.env.YOLO_SERVICE_URL
+      ? "YOLOv8 verification service (production)"
+      : "Development heuristic verifier (labeled) — connect YOLO_SERVICE_URL for model verification",
   };
 }

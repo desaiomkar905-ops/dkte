@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hashPassword, createSessionToken, sessionCookieName } from "@/lib/auth";
-import { handleRouteError, jsonError, rateLimit, clientKey } from "@/lib/api";
+import { handleRouteError, jsonError, rateLimit, clientKey, readJson } from "@/lib/api";
 
 const bodySchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     if (!rateLimit(clientKey(req, "register"), 5, 60 * 60_000)) {
       return jsonError(429, "Too many registration attempts. Try again later.");
     }
-    const body = bodySchema.parse(await req.json());
+    const body = bodySchema.parse(await readJson(req));
 
     const exists = await prisma.user.findUnique({ where: { email: body.email.toLowerCase() } });
     if (exists) return jsonError(409, "An account with this email already exists");

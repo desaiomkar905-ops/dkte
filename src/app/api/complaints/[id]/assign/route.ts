@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
-import { handleRouteError, jsonError } from "@/lib/api";
+import { handleRouteError, jsonError, readJson } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { assignWorker } from "@/lib/agent/tools";
 
@@ -13,7 +13,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const official = await requireRole(req, "OFFICIAL");
     const { id } = await params;
-    const { workerId } = bodySchema.parse(await req.json());
+    const { workerId } = bodySchema.parse(await readJson(req));
 
     const complaint = await prisma.complaint.findUnique({ where: { id }, include: { department: true } });
     if (!complaint) return jsonError(404, "Complaint not found");
@@ -21,8 +21,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return jsonError(409, `Complaint is already ${complaint.status.toLowerCase()}`);
     }
 
+    // Validate the worker explicitly so a bad id returns 404, not a 500.
+    const worker = await prisma.user.findUnique({ where: { id: workerId }, select: { id: true, name: true, role: true } });
+    if (!worker || worker.role !== "WORKER") return jsonError(404, "Worker not found");
+
     const updated = await assignWorker(id, workerId);
-    const worker = await prisma.user.findUnique({ where: { id: workerId }, select: { name: true } });
     await prisma.timelineEvent.create({
       data: {
         complaintId: id, type: "ASSIGNMENT", actor: `official:${official.name}`,

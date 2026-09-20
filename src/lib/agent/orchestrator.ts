@@ -186,7 +186,8 @@ export async function orchestrateNewComplaint(input: OrchestrationInput): Promis
         type: "STATUS",
         actor: "agent:DuplicateAgent",
         title: `Linked to potentially related complaint ${dup.candidate.refCode}`,
-        detail: `${dup.distanceM}m away, ${(dup.textSimilarity * 100).toFixed(0)}% description similarity`,
+        // Full explainability: existing case, distance, category, recency, text similarity.
+        detail: dup.reasons.join(" · ") + ` · match score ${dup.score}`,
       },
     });
   }

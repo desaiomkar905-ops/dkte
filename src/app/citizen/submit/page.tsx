@@ -58,7 +58,7 @@ export default function SubmitPage() {
       if (!u) { router.push("/login"); return; }
       if (u.role !== "CITIZEN" && u.role !== "OFFICIAL") { router.push(u.role === "WORKER" ? "/worker" : "/official"); return; }
     });
-    fetch("/api/health/ai").then((r) => r.json()).then((d) => setDevVision(String(d.providers?.vision).startsWith("dev"))).catch(() => {});
+    fetch("/api/health/ai").then((r) => r.json()).then((d) => setDevVision(/^dev/i.test(String(d.providers?.vision)))).catch(() => {});
     const t = setTimeout(() => setRecAvailable(Boolean(getRecognition())), 0);
     return () => clearTimeout(t);
   }, [router]);

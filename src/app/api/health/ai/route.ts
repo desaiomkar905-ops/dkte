@@ -9,5 +9,6 @@ export const runtime = "nodejs";
  * models (YOLO service / Bedrock) or the clearly-labeled dev providers.
  */
 export async function GET() {
-  return NextResponse.json({ providers: aiProviderStatus(), at: new Date().toISOString() });
+  const demoEnabled = process.env.DEMO_MODE !== "false" && (process.env.NODE_ENV !== "production" || process.env.DEMO_MODE === "true");
+  return NextResponse.json({ providers: aiProviderStatus(), demoMode: demoEnabled, at: new Date().toISOString() });
 }
