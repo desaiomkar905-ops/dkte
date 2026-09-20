@@ -1,0 +1,152 @@
+// CivicShield AI — original schema designed for this project.
+// SQLite for the runnable hackathon prototype; switch provider to "postgresql"
+// and DATABASE_URL to a Supabase/Postgres URL for production (no model changes needed).
+// SQLite does not support native enums, so enum-like fields are validated strings
+// enforced by zod schemas in src/lib/constants.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         String   @default("CITIZEN") // CITIZEN | WORKER | OFFICIAL
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  karma        Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  complaints         Complaint[] @relation("Reporter")
+  assignedComplaints Complaint[] @relation("AssignedWorker")
+}
+
+model Department {
+  id   String @id @default(cuid())
+  name String @unique
+  code String @unique // PWD | SWM | ELECT | WATER | HEALTH | GEN
+  slaNote String?
+
+  complaints Complaint[] @relation("DepartmentComplaints")
+  workers    User[]
+}
+
+model Complaint {
+  id       String @id @default(cuid())
+  refCode  String @unique // CS-2026-000123
+
+  title       String
+  description String
+  category    String // POTHOLE | GARBAGE | WATERLOGGING | STREETLIGHT | ROAD_DAMAGE | WASTE_OVERFLOW | OTHER
+  severity    String // LOW | MEDIUM | HIGH | CRITICAL
+  priority    Int // 1..100
+
+  status  String  @default("RECEIVED") // RECEIVED | ASSIGNED | IN_PROGRESS | VERIFICATION | RESOLVED | REOPENED | ESCALATED | CLOSED
+  source  String  @default("CITIZEN") // CITIZEN | DEMO (demo seed data is always marked)
+
+  lat     Float
+  lng     Float
+  address String?
+  ward    String?
+
+  language     String  @default("en") // en | hi | mr
+  transcript   String? // voice-to-text transcript if submitted by voice
+  originalText String? // raw citizen text before LLM cleanup
+
+  photoKey       String?
+  resolutionKey  String?
+
+  aiConfidence Float?
+  aiSummary    String? // LLM-written concise situation summary
+
+  departmentId String?
+  department   Department? @relation("DepartmentComplaints", fields: [departmentId], references: [id])
+  reporterId   String
+  reporter     User @relation("Reporter", fields: [reporterId], references: [id])
+  assignedToId String?
+  assignedTo   User? @relation("AssignedWorker", fields: [assignedToId], references: [id])
+
+  // SLA
+  slaHours Int?
+  slaDueAt DateTime?
+  isOverdue Boolean @default(false)
+
+  // resolution verification
+  verified               Boolean?
+  verificationConfidence Float?
+  verificationReason     String?
+  verifiedAt             DateTime?
+
+  escalationCount Int @default(0)
+  reopenedCount   Int @default(0)
+
+  // duplicate intelligence
+  duplicateOfId String?
+  duplicateOf   Complaint?  @relation("DuplicateOf", fields: [duplicateOfId], references: [id], onDelete: SetNull)
+  duplicates    Complaint[] @relation("DuplicateOf")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  assignedAt  DateTime?
+  startedAt   DateTime?
+  submittedAt DateTime?
+  resolvedAt  DateTime?
+  closedAt    DateTime?
+
+  events          TimelineEvent[]
+  agentActivities AgentActivity[]
+  escalations     Escalation[]
+
+  @@index([status])
+  @@index([category])
+  @@index([departmentId])
+  @@index([assignedToId])
+  @@index([lat, lng])
+}
+
+model TimelineEvent {
+  id          String   @id @default(cuid())
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  type        String // CREATED | STATUS | ASSIGNMENT | VERIFICATION | ESCALATION | SLA | EVIDENCE
+  actor       String   @default("system") // system | citizen | worker | official | agent:<name>
+  title       String
+  detail      String?
+  createdAt   DateTime @default(now())
+
+  @@index([complaintId])
+}
+
+model AgentActivity {
+  id          String    @id @default(cuid())
+  complaintId String?
+  complaint   Complaint? @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  runId       String? // groups one orchestrated run
+  agent       String // VisionAgent | TriageAgent | DuplicateAgent | RoutingAgent | DispatchAgent | VerificationAgent | SLAAgent
+  action      String // tool name executed, e.g. analyze_image
+  summary     String // one-line human-readable decision
+  detail      String? // compact structured context (JSON string)
+  createdAt   DateTime  @default(now())
+
+  @@index([complaintId])
+  @@index([runId])
+}
+
+model Escalation {
+  id          String   @id @default(cuid())
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  level       Int      @default(1)
+  reason      String
+  createdAt   DateTime @default(now())
+
+  @@index([complaintId])
+}
