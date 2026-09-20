@@ -216,7 +216,8 @@ export async function escalateComplaint(complaintId: string, reason: string) {
 }
 
 /** reopen_complaint — verification failed; citizen issue persists. */
-export async function reopenComplaint(complaintId: string, reason: string) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function reopenComplaint(complaintId: string, _reason: string) {
   const c = await prisma.complaint.findUnique({ where: { id: complaintId } });
   if (!c) throw new Error("Complaint not found");
   return prisma.complaint.update({

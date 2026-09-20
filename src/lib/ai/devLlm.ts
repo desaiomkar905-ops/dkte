@@ -37,7 +37,10 @@ export class DevLLMProvider implements LLMProvider {
       }
     }
     // Vision result outranks keyword matching when confident.
-    if (input.visionCategory && (input.visionConfidence ?? 0) >= 0.5) category = input.visionCategory;
+    if (input.visionCategory && (input.visionConfidence ?? 0) >= 0.5) {
+      const known = CATEGORIES.find((c) => c === input.visionCategory);
+      if (known) category = known;
+    }
 
     const finalCategory = category ?? "OTHER";
     const reasoning: string[] = [];

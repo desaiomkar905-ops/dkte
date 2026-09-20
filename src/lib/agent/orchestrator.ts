@@ -165,6 +165,10 @@ export async function orchestrateNewComplaint(input: OrchestrationInput): Promis
 
   await log(AGENTS.dispatch, "create_complaint", `Complaint ${refCode} created`, { refCode, category, severity: sev.severity, priority: prio.priority }, complaint.id);
 
+  // Link every decision from this run to the complaint so the Agent Activity
+  // panel shows the full pipeline (Vision → Triage → Duplicate → Routing).
+  await prisma.agentActivity.updateMany({ where: { runId }, data: { complaintId: complaint.id } });
+
   await prisma.timelineEvent.create({
     data: {
       complaintId: complaint.id,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkSla } from "@/lib/agent/tools";
-import { handleRouteError, jsonError } from "@/lib/api";
+import { jsonError } from "@/lib/api";
 
 export const runtime = "nodejs";
 
