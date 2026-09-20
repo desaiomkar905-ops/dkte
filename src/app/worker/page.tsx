@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
-import { Card, StatusBadge, SeverityBadge, CategoryTag, Spinner, LoginPrompt, ErrorNote } from "@/components/ui";
+import { Card, StatusBadge, SeverityBadge, CategoryTag, DemoBadge, Skeleton, LoginPrompt, ErrorNote, PageHeader } from "@/components/ui";
 import { api, fetchMe, fmtDateTime, fmtAgo, type SessionUser } from "@/lib/client";
 
 type Row = {
@@ -53,64 +53,74 @@ export default function WorkerPage() {
     }
   }
 
+  const open = (rows ?? []).filter((r) => !["RESOLVED", "CLOSED"].includes(r.status)).length;
+
   return (
     <AppShell>
-      <div className="mx-auto max-w-4xl space-y-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">My Tasks</h1>
-          <p className="text-sm text-slate-500">Accept assignments, work on site, then submit resolution evidence for AI verification.</p>
-        </div>
+      <div className="mx-auto max-w-4xl space-y-5">
+        <PageHeader
+          title="My Tasks"
+          subtitle="Accept assignments, work on site, then submit resolution evidence for AI verification."
+        />
 
         {error && <ErrorNote message={error} />}
         {actionError && <ErrorNote message={actionError} />}
-        {rows === null && !error && <div className="grid place-items-center py-16"><Spinner /></div>}
+        {rows === null && !error && (
+          <div className="space-y-3">{[0, 1].map((i) => <Skeleton key={i} className="h-36" />)}</div>
+        )}
         {rows && rows.length === 0 && (
-          <Card className="p-10 text-center text-slate-500">No tasks assigned yet. Officials assign complaints from their dashboard.</Card>
+          <Card className="p-10 text-center text-cs-muted">
+            No tasks assigned yet. Officials assign complaints from their dashboard.
+          </Card>
+        )}
+
+        {rows && rows.length > 0 && (
+          <p className="text-xs text-cs-muted">
+            {open} open task{open === 1 ? "" : "s"} · {rows.length} total assigned
+          </p>
         )}
 
         <div className="space-y-3">
-          {rows?.map((r) => (
-            <Card key={r.id} className="p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-xs text-slate-400">{r.refCode}</span>
-                <StatusBadge status={r.status} />
+          {rows?.map((r, i) => (
+            <Card key={r.id} hover className="cs-fade-up p-4 sm:p-5">
+              <div className="flex flex-wrap items-center gap-2" style={{ animationDelay: `${Math.min(i * 50, 250)}ms` }}>
+                <span className="font-mono text-xs text-cs-muted">{r.refCode}</span>
+                <StatusBadge status={r.status} pulse={r.status === "VERIFICATION"} />
                 <SeverityBadge severity={r.severity} />
                 <CategoryTag category={r.category} />
-                {r.source === "DEMO" && <span className="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-violet-200">DEMO</span>}
-                {r.isOverdue && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-rose-200">OVERDUE</span>}
+                {r.source === "DEMO" && <DemoBadge />}
+                {r.isOverdue && <span className="cs-badge border-rose-400/40 bg-rose-500/15 text-rose-300">OVERDUE</span>}
               </div>
-              <Link href={`/complaints/${r.id}`} className="mt-1.5 block font-medium text-civic-700 hover:underline">{r.title}</Link>
-              <p className="mt-1 line-clamp-2 text-sm text-slate-600">{r.description}</p>
-              <p className="mt-1 text-xs text-slate-400">
+              <Link href={`/complaints/${r.id}`} className="mt-2 block font-medium text-sky-300 hover:underline">{r.title}</Link>
+              <p className="mt-1 line-clamp-2 text-sm text-cs-muted">{r.description}</p>
+              <p className="mt-1.5 text-xs text-cs-muted">
                 📍 {r.address ?? `${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}`} · reported {fmtAgo(r.createdAt)}
-                {r.slaDueAt && <> · SLA due {fmtDateTime(r.slaDueAt)}</>}
+                {r.slaDueAt && <> · <span className={r.isOverdue ? "font-semibold text-rose-300" : "text-amber-300"}>SLA {r.isOverdue ? "breached" : `due ${fmtDateTime(r.slaDueAt)}`}</span></>}
               </p>
 
               <div className="mt-3 flex flex-wrap gap-2">
                 {r.status === "ASSIGNED" && (
                   <>
                     <button onClick={() => setStatus(r.id, "accept")} disabled={busyId === r.id}
-                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50 disabled:opacity-50">Accept</button>
+                      className="cs-btn cs-btn-secondary !py-1.5 !text-sm disabled:opacity-50">Accept</button>
                     <button onClick={() => setStatus(r.id, "start")} disabled={busyId === r.id}
-                      className="rounded-lg bg-civic-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-civic-900 disabled:opacity-50">Start work</button>
+                      className="cs-btn cs-btn-primary !py-1.5 !text-sm disabled:opacity-50">Start work</button>
                   </>
                 )}
                 {r.status === "IN_PROGRESS" && (
-                  <Link href={`/worker/resolve/${r.id}`}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700">
+                  <Link href={`/worker/resolve/${r.id}`} className="cs-btn cs-btn-success !py-1.5 !text-sm">
                     Upload resolution evidence →
                   </Link>
                 )}
                 {r.status === "VERIFICATION" && (
-                  <span className="rounded-lg bg-amber-50 px-3 py-1.5 text-sm text-amber-700 ring-1 ring-amber-200">AI is verifying your evidence…</span>
+                  <span className="cs-badge border-amber-400/30 bg-amber-500/10 text-amber-300">AI is verifying your evidence…</span>
                 )}
                 {r.status === "REOPENED" && (
-                  <Link href={`/worker/resolve/${r.id}`}
-                    className="rounded-lg bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-700">
+                  <Link href={`/worker/resolve/${r.id}`} className="cs-btn !border-orange-400/40 !bg-orange-500/15 !py-1.5 !text-sm !text-orange-300 hover:!bg-orange-500/20">
                     Reopened — submit new evidence →
                   </Link>
                 )}
-                <Link href={`/complaints/${r.id}`} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">View case</Link>
+                <Link href={`/complaints/${r.id}`} className="cs-btn cs-btn-secondary !py-1.5 !text-sm">View case</Link>
               </div>
             </Card>
           ))}

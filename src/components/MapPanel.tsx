@@ -6,7 +6,9 @@ import type CivicMapType from "./CivicMap";
 
 const CivicMap = dynamic(() => import("./CivicMap"), {
   ssr: false,
-  loading: () => <div className="grid h-full w-full place-items-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-400">Loading map…</div>,
+  loading: () => (
+    <div className="cs-skeleton h-full w-full rounded-2xl border border-cs-border" aria-label="Loading map" />
+  ),
 });
 
 export default function MapPanel(props: ComponentProps<typeof CivicMapType>) {

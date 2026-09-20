@@ -1,6 +1,6 @@
 "use client";
 
-import { Card } from "./ui";
+import { Card, Skeleton } from "./ui";
 import { fmtDateTime } from "@/lib/client";
 
 export type Activity = {
@@ -13,54 +13,83 @@ export type Activity = {
   complaint?: { refCode: string } | null;
 };
 
-const AGENT_TONE: Record<string, string> = {
-  VisionAgent: "bg-civic-50 text-civic-700 ring-civic-100",
-  TriageAgent: "bg-indigo-50 text-indigo-700 ring-indigo-100",
-  DuplicateAgent: "bg-cyan-50 text-cyan-700 ring-cyan-100",
-  RoutingAgent: "bg-teal-50 text-teal-700 ring-teal-100",
-  DispatchAgent: "bg-sky-50 text-sky-700 ring-sky-100",
-  VerificationAgent: "bg-amber-50 text-amber-700 ring-amber-100",
-  SLAAgent: "bg-rose-50 text-rose-700 ring-rose-100",
+/** Icon + human role per agent (visual only — data unchanged). */
+export const AGENT_META: Record<string, { icon: string; role: string; tone: string }> = {
+  VisionAgent: { icon: "👁", role: "Computer vision", tone: "text-sky-300 border-sky-400/30 bg-sky-500/10" },
+  TriageAgent: { icon: "🧠", role: "Classification & severity", tone: "text-indigo-300 border-indigo-400/30 bg-indigo-500/10" },
+  DuplicateAgent: { icon: "🧭", role: "Duplicate intelligence", tone: "text-cyan-300 border-cyan-400/30 bg-cyan-500/10" },
+  RoutingAgent: { icon: "🚀", role: "Department routing", tone: "text-teal-300 border-teal-400/30 bg-teal-500/10" },
+  DispatchAgent: { icon: "📮", role: "Intake & notifications", tone: "text-blue-300 border-blue-400/30 bg-blue-500/10" },
+  VerificationAgent: { icon: "✅", role: "Resolution verification", tone: "text-amber-300 border-amber-400/30 bg-amber-500/10" },
+  SLAAgent: { icon: "⏰", role: "SLA & escalation", tone: "text-rose-300 border-rose-400/30 bg-rose-500/10" },
 };
 
 /**
- * Agent Activity panel — generated from the persisted AgentActivity table
- * (server-side decisions), never from client-side theater. Each entry shows
- * the agent, the tool action, a concise result, the timestamp, and — where a
- * model was involved — which provider produced it. Decision *factors* are
- * shown as bullets; hidden chain-of-thought is never displayed because none
- * is stored.
+ * Agent Activity panel — rendered from the persisted AgentActivity table
+ * (server-side decisions), styled as a connected pipeline. Concise decision
+ * factors only; no hidden chain-of-thought exists in the data.
  */
-export function AgentActivityPanel({ activities, title = "Agent Activity" }: { activities: Activity[]; title?: string }) {
+export function AgentActivityPanel({
+  activities,
+  title = "Agent Activity",
+  loading = false,
+}: {
+  activities: Activity[];
+  title?: string;
+  loading?: boolean;
+}) {
   return (
-    <Card className="p-4">
-      <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
-      {activities.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-400">No agent activity yet.</p>
-      ) : (
-        <ol className="mt-3 space-y-3">
-          {activities.map((a) => (
-            <li key={a.id} className="flex gap-2.5">
-              <span
-                aria-hidden
-                className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-50 text-[11px] font-bold text-emerald-600 ring-1 ring-emerald-200"
-              >
-                ✓
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`inline-flex rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ${AGENT_TONE[a.agent] ?? "bg-slate-100 text-slate-600 ring-slate-200"}`}>
-                    {a.agent}
-                  </span>
-                  <span className="font-mono text-xs text-slate-400">{a.action}</span>
-                  {a.complaint?.refCode && <span className="text-xs text-slate-400">{a.complaint.refCode}</span>}
-                  <span className="ml-auto text-xs text-slate-400">{fmtDateTime(a.createdAt)}</span>
-                </div>
-                <p className="mt-1 break-words text-sm text-slate-700">{a.summary}</p>
-                {a.detail && <Reasons detail={a.detail} />}
+    <Card className="p-4 sm:p-5">
+      <div className="flex items-center gap-2">
+        <span className="cs-pulse-dot h-2 w-2 rounded-full bg-sky-400" aria-hidden />
+        <h3 className="text-sm font-semibold text-cs-text">{title}</h3>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 space-y-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex gap-3">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-3 w-3/4" />
               </div>
-            </li>
+            </div>
           ))}
+        </div>
+      ) : activities.length === 0 ? (
+        <p className="mt-3 text-sm text-cs-muted">No agent decisions recorded for this case{title.includes("this report") ? "" : " — live submissions run the full agent pipeline."}</p>
+      ) : (
+        <ol className="relative mt-4 space-y-5 pl-1">
+          {/* connecting line */}
+          <span aria-hidden className="absolute bottom-3 left-[15px] top-3 w-px bg-gradient-to-b from-sky-400/40 via-cs-border to-transparent" />
+          {activities.map((a, idx) => {
+            const meta = AGENT_META[a.agent] ?? {
+              icon: "🤖",
+              role: "Agent",
+              tone: "text-slate-300 border-slate-400/30 bg-slate-500/10",
+            };
+            return (
+              <li key={a.id} className="cs-fade-up relative flex gap-3" style={{ animationDelay: `${Math.min(idx * 60, 360)}ms` }}>
+                <span
+                  aria-hidden
+                  className={`z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full border text-sm ${meta.tone}`}
+                >
+                  {meta.icon}
+                </span>
+                <div className="min-w-0 flex-1 pb-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className={`cs-badge ${meta.tone}`}>{a.agent}</span>
+                    <span className="font-mono text-[11px] text-cs-muted/80">{a.action}</span>
+                    {a.complaint?.refCode && <span className="text-[11px] text-cs-muted/70">{a.complaint.refCode}</span>}
+                    <span className="ml-auto text-[11px] text-cs-muted/70">{fmtDateTime(a.createdAt)}</span>
+                  </div>
+                  <p className="mt-1 break-words text-sm leading-relaxed text-slate-200">{a.summary}</p>
+                  {a.detail && <Reasons detail={a.detail} />}
+                </div>
+              </li>
+            );
+          })}
         </ol>
       )}
     </Card>
@@ -87,16 +116,15 @@ function Reasons({ detail }: { detail: string }) {
   const model = parsed?.model;
   const note = parsed?.note;
   const reasons = parsed?.reasons ?? parsed?.reasoning ?? parsed?.match?.reasons;
-  const showProvider = provider ? true : false;
 
-  if (!showProvider && !note && !reasons?.length) return null;
+  if (!provider && !note && !reasons?.length) return null;
 
   return (
-    <div className="mt-1">
-      {showProvider && <ProviderChip provider={provider as string} model={model} />}
-      {note && <p className="text-xs italic text-slate-400">{note}</p>}
+    <div className="mt-1.5">
+      {provider && <ProviderChip provider={provider} model={model} />}
+      {note && <p className="text-xs italic text-cs-muted/90">{note}</p>}
       {reasons && reasons.length > 0 && (
-        <ul className="list-disc space-y-0.5 pl-5 text-xs text-slate-500">
+        <ul className="mt-1 space-y-0.5 border-l border-cs-border pl-3 text-xs text-cs-muted">
           {reasons.map((r: string, i: number) => (
             <li key={i}>{r}</li>
           ))}
@@ -118,13 +146,11 @@ function ProviderChip({ provider, model }: { provider: string; model?: string })
             ? `Real YOLOv8 model inference via the vision service${model ? ` (${model})` : ""}`
             : "Production AI provider"
       }
-      className={`mr-2 inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ring-1 ${
-        isDev ? "bg-amber-50 text-amber-700 ring-amber-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+      className={`mr-2 inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-semibold ${
+        isDev ? "border-amber-400/30 bg-amber-500/10 text-amber-300" : "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
       }`}
     >
-      {realYolo
-        ? `REAL YOLO MODEL${model ? ` · ${model}` : ""}`
-        : `AI Provider: ${provider}${isDev ? " (dev)" : ""}`}
+      {realYolo ? `REAL YOLO MODEL${model ? ` · ${model}` : ""}` : `AI Provider: ${provider}${isDev ? " (dev)" : ""}`}
     </span>
   );
 }

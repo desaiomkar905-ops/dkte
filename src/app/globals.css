@@ -1,21 +1,41 @@
 @import "tailwindcss";
 
-/* CivicShield AI — civic-tech design tokens (clean, professional, no neon) */
-:root {
-  --cs-primary: #1e40af; /* civic blue */
-  --cs-primary-soft: #eff6ff;
-}
+/* ────────────────────────────────────────────────────────────────────
+   CivicShield AI — design system ("civic-tech command center")
+   Deep navy canvas · navy surfaces · professional blue accent
+   8px spacing rhythm · 16–20px card radii · no neon, no gimmicks
+   ──────────────────────────────────────────────────────────────────── */
 
 @theme inline {
-  --color-civic-50: #eff6ff;
-  --color-civic-100: #dbeafe;
-  --color-civic-600: #2563eb;
-  --color-civic-700: #1d4ed8;
-  --color-civic-900: #1e3a8a;
+  --color-cs-bg: #07111f;
+  --color-cs-surface: #0d1b2a;
+  --color-cs-elevated: #12263a;
+  --color-cs-primary: #2563eb;
+  --color-cs-primary-hover: #3b82f6;
+  --color-cs-success: #10b981;
+  --color-cs-warning: #f59e0b;
+  --color-cs-critical: #ef4444;
+  --color-cs-text: #f8fafc;
+  --color-cs-muted: #94a3b8;
+  --color-cs-border: rgba(148, 163, 184, 0.15);
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(37, 99, 235, 0.14), transparent 60%),
+    radial-gradient(900px 420px at -10% 0%, rgba(16, 185, 129, 0.05), transparent 55%),
+    var(--color-cs-bg);
+  color: var(--color-cs-text);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(37, 99, 235, 0.45);
 }
 
 /* Focus visibility for accessibility */
@@ -23,13 +43,238 @@ a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid var(--cs-primary);
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-cs-primary-hover);
   outline-offset: 2px;
+  border-radius: 6px;
 }
 
-/* Compact utility used by tables on small screens */
+/* ── Surfaces ────────────────────────────────────────────────────── */
+.cs-card {
+  border-radius: 18px;
+  border: 1px solid var(--color-cs-border);
+  background: linear-gradient(180deg, rgba(18, 38, 58, 0.75), rgba(13, 27, 42, 0.9));
+  box-shadow: 0 1px 0 rgba(248, 250, 252, 0.04) inset, 0 12px 32px -18px rgba(2, 8, 20, 0.9);
+}
+
+.cs-card-hover {
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+.cs-card-hover:hover {
+  border-color: rgba(59, 130, 246, 0.45);
+  transform: translateY(-1px);
+}
+
+.cs-elevated {
+  background: var(--color-cs-elevated);
+  border: 1px solid var(--color-cs-border);
+}
+
+/* Horizontal scroll region on small screens (tables) */
 .cs-scroll-x {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* ── Form controls ───────────────────────────────────────────────── */
+.cs-input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--color-cs-border);
+  background: rgba(7, 17, 31, 0.6);
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--color-cs-text);
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.cs-input::placeholder {
+  color: rgba(148, 163, 184, 0.65);
+}
+.cs-input:hover {
+  border-color: rgba(148, 163, 184, 0.3);
+}
+.cs-input:focus {
+  border-color: var(--color-cs-primary-hover);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+.cs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 18px;
+  transition: background 140ms ease, border-color 140ms ease, transform 100ms ease, box-shadow 140ms ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.cs-btn:active {
+  transform: translateY(1px);
+}
+.cs-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.cs-btn-primary {
+  background: var(--color-cs-primary);
+  color: #fff;
+  box-shadow: 0 8px 24px -10px rgba(37, 99, 235, 0.7);
+}
+.cs-btn-primary:hover:not(:disabled) {
+  background: var(--color-cs-primary-hover);
+}
+.cs-btn-secondary {
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--color-cs-text);
+  border-color: var(--color-cs-border);
+}
+.cs-btn-secondary:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.14);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+.cs-btn-success {
+  background: var(--color-cs-success);
+  color: #04211a;
+}
+.cs-btn-success:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.cs-btn-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+.cs-btn-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* ── Badges ──────────────────────────────────────────────────────── */
+.cs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* ── Skeleton shimmer ────────────────────────────────────────────── */
+.cs-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.09);
+}
+.cs-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.14), transparent);
+  animation: cs-shimmer 1.6s infinite;
+}
+@keyframes cs-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ── Entrance animations (subtle) ────────────────────────────────── */
+@keyframes cs-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.cs-fade-up {
+  animation: cs-fade-up 360ms ease both;
+}
+
+@keyframes cs-pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    opacity: 0.75;
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+  }
+}
+.cs-pulse-dot {
+  animation: cs-pulse-dot 1.6s ease-in-out infinite;
+}
+
+@keyframes cs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Leaflet dark treatment ──────────────────────────────────────── */
+.leaflet-container {
+  background: #0b1626;
+  font-family: inherit;
+}
+.leaflet-tile-pane {
+  filter: brightness(0.72) contrast(1.06) saturate(0.7) hue-rotate(190deg) invert(0.92);
+}
+.leaflet-control-zoom a {
+  background: var(--color-cs-elevated) !important;
+  color: var(--color-cs-text) !important;
+  border-color: var(--color-cs-border) !important;
+}
+.leaflet-control-zoom a:hover {
+  background: #1a3350 !important;
+}
+.leaflet-control-attribution {
+  background: rgba(7, 17, 31, 0.8) !important;
+  color: var(--color-cs-muted) !important;
+  font-size: 10px !important;
+}
+.leaflet-control-attribution a {
+  color: #7da2d9 !important;
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--color-cs-elevated);
+  color: var(--color-cs-text);
+  border: 1px solid var(--color-cs-border);
+  box-shadow: 0 16px 40px -18px rgba(2, 8, 20, 0.95);
+}
+.leaflet-popup-content {
+  margin: 12px 16px;
+}
+.leaflet-popup-close-button {
+  color: var(--color-cs-muted) !important;
+}
+
+/* Map marker hover */
+.cs-marker {
+  transition: transform 140ms ease;
+}
+.cs-marker:hover {
+  transform: scale(1.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cs-fade-up,
+  .cs-pulse-dot,
+  .cs-skeleton::after {
+    animation: none;
+  }
 }

@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import { Card, Spinner, ErrorNote, StatusBadge, SeverityBadge } from "@/components/ui";
+import { Card, Skeleton, ErrorNote, StatusBadge, SeverityBadge, Spinner } from "@/components/ui";
 import { api, fetchMe, type SessionUser } from "@/lib/client";
 
 type Detail = {
@@ -39,7 +39,7 @@ export default function ResolvePage({ params }: { params: Promise<{ id: string }
   }, [id, router]);
 
   if (me === null) return <AppShell><ErrorNote message="Please sign in as the assigned worker." /></AppShell>;
-  if (!c && !error) return <AppShell><div className="grid place-items-center py-20"><Spinner /></div></AppShell>;
+  if (!c && !error) return <AppShell><div className="mx-auto max-w-2xl"><Skeleton className="h-64" /></div></AppShell>;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,69 +64,91 @@ export default function ResolvePage({ params }: { params: Promise<{ id: string }
     <AppShell>
       <div className="mx-auto max-w-2xl space-y-4">
         {result ? (
-          <Card className={`p-6 ${result.verdict.verified ? "border-emerald-200 bg-emerald-50" : "border-orange-200 bg-orange-50"}`}>
-            <h1 className={`text-lg font-bold ${result.verdict.verified ? "text-emerald-800" : "text-orange-800"}`}>
-              {result.verdict.verified ? "✓ AI verified the resolution" : "↺ AI could not verify — complaint reopened"}
-            </h1>
-            <p className="mt-2 text-sm text-slate-700">{result.verdict.reason}</p>
-            <p className="mt-1 text-xs text-slate-500">
-              Confidence {(result.verdict.confidence * 100).toFixed(0)}% · provider {result.verdict.provider} · new status: {result.status}
-            </p>
-            <div className="mt-4 flex gap-2">
-              <Link href={`/complaints/${id}`} className="rounded-lg bg-civic-700 px-4 py-2 text-sm font-semibold text-white hover:bg-civic-900">View case</Link>
-              <Link href="/worker" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50">Back to tasks</Link>
+          <Card className={`cs-fade-up p-6 ${result.verdict.verified ? "border-emerald-400/30 bg-emerald-500/10" : "border-orange-400/30 bg-orange-500/10"}`}>
+            <div className="flex flex-col items-center text-center">
+              <div className={`grid h-12 w-12 place-items-center rounded-full border text-xl ${result.verdict.verified ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300" : "border-orange-400/30 bg-orange-500/15 text-orange-300"}`} aria-hidden>
+                {result.verdict.verified ? "✓" : "↺"}
+              </div>
+              <p className={`mt-3 text-xs font-semibold uppercase tracking-[0.12em] ${result.verdict.verified ? "text-emerald-300" : "text-orange-300"}`}>
+                {result.verdict.verified ? "Resolution verified" : "Resolution not verified"}
+              </p>
+              <h1 className="mt-1 text-xl font-semibold tracking-tight">
+                {result.verdict.verified ? "The AI confirmed the repair" : "Complaint reopened"}
+              </h1>
+              <p className="mt-2 max-w-md text-sm text-cs-muted">{result.verdict.reason}</p>
+              <p className="mt-2 text-xs text-cs-muted">
+                Confidence <strong className="text-cs-text">{(result.verdict.confidence * 100).toFixed(0)}%</strong>
+                {" · "}provider <strong className="text-cs-text">{result.verdict.provider}</strong>
+                {result.verdict.provider.startsWith("dev") && <span className="ml-1 text-amber-300">(labeled development provider)</span>}
+                {" · "}new status: <strong className="text-cs-text">{result.status}</strong>
+              </p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <Link href={`/complaints/${id}`} className="cs-btn cs-btn-primary">View case</Link>
+                <Link href="/worker" className="cs-btn cs-btn-secondary">Back to tasks</Link>
+              </div>
             </div>
           </Card>
         ) : (
           <>
-            <h1 className="text-xl font-bold text-slate-900">Submit resolution evidence</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Submit resolution evidence</h1>
             {c && (
-              <Card className="p-4">
+              <Card className="cs-fade-up p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-xs text-slate-400">{c.refCode}</span>
+                  <span className="font-mono text-xs text-cs-muted">{c.refCode}</span>
                   <StatusBadge status={c.status} />
                   <SeverityBadge severity={c.severity} />
                 </div>
-                <p className="mt-1.5 font-medium text-slate-800">{c.title}</p>
-                <p className="mt-1 text-sm text-slate-600">{c.description}</p>
+                <p className="mt-2 font-medium">{c.title}</p>
+                <p className="mt-1 text-sm text-cs-muted">{c.description}</p>
                 {c.photoUrl && (
                   <figure className="mt-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={c.photoUrl} alt="Original issue photo" className="max-h-64 rounded-lg border border-slate-200 object-cover" />
-                    <figcaption className="mt-1 text-xs text-slate-500">Before — citizen&apos;s original photo</figcaption>
+                    <img src={c.photoUrl} alt="Original issue photo" className="max-h-64 w-full rounded-xl border border-cs-border object-cover" />
+                    <figcaption className="mt-1.5 text-xs text-cs-muted">Before — citizen&apos;s original photo</figcaption>
                   </figure>
                 )}
               </Card>
             )}
 
             <form onSubmit={submit} className="space-y-4">
-              <Card className="space-y-3 p-4">
+              <Card className="space-y-3 p-5">
                 <div>
-                  <label htmlFor="after" className="text-sm font-medium text-slate-700">After-resolution photo *</label>
-                  <input id="after" type="file" accept="image/jpeg,image/png,image/webp" capture="environment"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0] ?? null;
-                      setFile(f);
-                      setPreview(f ? URL.createObjectURL(f) : null);
-                    }}
-                    className="mt-1 block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-emerald-700" />
-                  {preview && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={preview} alt="After-resolution preview" className="mt-2 max-h-64 rounded-lg border border-slate-200 object-cover" />
+                  <label htmlFor="after" className="text-sm font-medium text-slate-300">After-resolution photo *</label>
+                  {preview ? (
+                    <div className="relative mt-2 overflow-hidden rounded-xl border border-cs-border">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={preview} alt="After-resolution preview" className="max-h-64 w-full object-cover" />
+                      <button type="button" onClick={() => { setFile(null); setPreview(null); }}
+                        className="absolute right-2 top-2 rounded-lg border border-cs-border bg-cs-bg/85 px-2.5 py-1 text-xs font-medium text-cs-text backdrop-blur-sm hover:bg-cs-elevated">
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <label htmlFor="after"
+                      className="mt-2 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-cs-border bg-cs-bg/40 px-6 py-10 text-center transition hover:border-emerald-400/50 hover:bg-emerald-500/5">
+                      <span className="text-2xl" aria-hidden>📸</span>
+                      <span className="text-sm font-medium">Upload after-resolution photo</span>
+                      <span className="text-xs text-cs-muted">Required — the Verification Agent reviews this image</span>
+                      <input id="after" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0] ?? null;
+                          setFile(f);
+                          setPreview(f ? URL.createObjectURL(f) : null);
+                        }} />
+                    </label>
                   )}
                 </div>
                 <div>
-                  <label htmlFor="note" className="text-sm font-medium text-slate-700">Work note (optional)</label>
-                  <input id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Filled with gravel, compacted and levelled"
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" maxLength={300} />
+                  <label htmlFor="note" className="text-sm font-medium text-slate-300">Work note (optional)</label>
+                  <input id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Filled with gravel, compacted and levelled" className="cs-input mt-1.5" maxLength={300} />
                 </div>
-                <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                <p className="rounded-xl border border-sky-400/25 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
                   ℹ️ The AI Verification Agent will independently check this photo before the case can close. A claim alone never resolves a complaint.
                 </p>
               </Card>
               {error && <ErrorNote message={error} />}
-              <button disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-3 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
-                {busy ? (<><Spinner className="border-white/40 border-t-white" /> Verifying…</>) : "Submit for AI verification"}
+              <button disabled={busy} className="cs-btn cs-btn-success w-full !py-3">
+                {busy ? (<><Spinner className="border-[#04211a]/40 border-t-[#04211a]" /> Verifying…</>) : "Submit for AI verification"}
               </button>
             </form>
           </>

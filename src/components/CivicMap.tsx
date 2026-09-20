@@ -16,19 +16,21 @@ export type MapComplaint = {
   source: string;
 };
 
-const SEVERITY_COLOR: Record<string, string> = {
-  LOW: "#64748b",
-  MEDIUM: "#f59e0b",
-  HIGH: "#f97316",
-  CRITICAL: "#e11d48",
+export const SEVERITY_COLOR: Record<string, string> = {
+  LOW: "#94A3B8",
+  MEDIUM: "#F59E0B",
+  HIGH: "#F97316",
+  CRITICAL: "#EF4444",
 };
 
-/** Civic Risk Map — severity-colored markers over OpenStreetMap tiles. */
+const RADIUS: Record<string, number> = { LOW: 6, MEDIUM: 7, HIGH: 9, CRITICAL: 11 };
+
+/** Civic Risk Map — severity-coded glowing markers over a dark-treated OSM layer. */
 export default function CivicMap({
   complaints,
   center = [16.6952, 74.4574],
   zoom = 13,
-  height = "420px",
+  height = "440px",
 }: {
   complaints: MapComplaint[];
   center?: [number, number];
@@ -36,50 +38,70 @@ export default function CivicMap({
   height?: string;
 }) {
   return (
-    <div className="relative" style={{ height }}>
+    <div className="relative overflow-hidden rounded-2xl border border-cs-border" style={{ height }}>
       <MapContainer center={center} zoom={zoom} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {complaints.map((c) => (
-          <CircleMarker
-            key={c.id}
-            center={[c.lat, c.lng]}
-            radius={c.severity === "CRITICAL" ? 10 : c.severity === "HIGH" ? 8 : 6}
-            pathOptions={{
-              color: SEVERITY_COLOR[c.severity] ?? "#64748b",
-              fillColor: SEVERITY_COLOR[c.severity] ?? "#64748b",
-              fillOpacity: 0.55,
-              weight: 2,
-            }}
-          >
-            <Popup>
-              <div className="min-w-44 space-y-1">
-                <div className="font-semibold">{c.refCode}</div>
-                <div className="text-sm">{c.title}</div>
-                <div className="text-xs text-slate-500">
-                  {c.category} · {c.severity} · {c.status} {c.source === "DEMO" && <span className="ml-1 rounded bg-violet-100 px-1 text-violet-700">DEMO</span>}
+        {complaints.map((c) => {
+          const color = SEVERITY_COLOR[c.severity] ?? "#94A3B8";
+          return (
+            <CircleMarker
+              key={c.id}
+              center={[c.lat, c.lng]}
+              radius={RADIUS[c.severity] ?? 6}
+              className="cs-marker"
+              pathOptions={{
+                color,
+                fillColor: color,
+                fillOpacity: 0.35,
+                weight: 2,
+                opacity: 0.9,
+              }}
+            >
+              <Popup>
+                <div className="min-w-48 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-cs-muted">{c.refCode}</span>
+                    {c.source === "DEMO" && (
+                      <span className="rounded border border-violet-400/30 bg-violet-500/10 px-1 text-[10px] font-semibold text-violet-300">DEMO</span>
+                    )}
+                  </div>
+                  <div className="text-sm font-semibold">{c.title}</div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full" style={{ background: color }} aria-hidden />
+                      {c.severity}
+                    </span>
+                    <span className="text-cs-muted">· {c.status.toLowerCase()}</span>
+                  </div>
+                  <Link href={`/complaints/${c.id}`} className="inline-block text-xs font-semibold text-sky-400 hover:underline">
+                    View report →
+                  </Link>
                 </div>
-                <Link href={`/complaints/${c.id}`} className="text-xs font-medium text-civic-700 underline">
-                  Open case
-                </Link>
-              </div>
-            </Popup>
-          </CircleMarker>
-        ))}
+              </Popup>
+            </CircleMarker>
+          );
+        })}
       </MapContainer>
 
-      <div className="absolute bottom-3 left-3 z-[500] rounded-lg border border-slate-200 bg-white/95 px-3 py-2 text-xs shadow-sm">
-        <div className="mb-1 font-semibold text-slate-600">Severity</div>
+      {/* Legend */}
+      <div className="pointer-events-none absolute bottom-3 left-3 z-[500] rounded-xl border border-cs-border bg-cs-bg/85 px-3 py-2.5 backdrop-blur-sm">
+        <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-cs-muted">Severity</div>
         <div className="flex gap-3">
           {Object.entries(SEVERITY_COLOR).map(([k, color]) => (
-            <span key={k} className="flex items-center gap-1">
-              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+            <span key={k} className="flex items-center gap-1.5 text-[11px] text-slate-300">
+              <span className="inline-block h-2 w-2 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}66` }} aria-hidden />
               {k[0] + k.slice(1).toLowerCase()}
             </span>
           ))}
         </div>
+      </div>
+
+      {/* Count chip */}
+      <div className="pointer-events-none absolute right-3 top-3 z-[500] rounded-lg border border-cs-border bg-cs-bg/85 px-2.5 py-1 text-[11px] font-medium text-cs-muted backdrop-blur-sm">
+        {complaints.length} report{complaints.length === 1 ? "" : "s"} plotted
       </div>
     </div>
   );
