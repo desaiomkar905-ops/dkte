@@ -73,8 +73,11 @@ fact is disclosed — results are never silently faked.
 ## Real-image test protocol (run once the weight is placed)
 
 ```bash
-# from the repo root
-node scripts/test-yolo.mjs pothole.jpg garbage.jpg water.jpg streetlight.jpg
+# 1. fetch four real civic photos from Wikimedia Commons (one-time)
+node scripts/fetch-test-images.mjs      # → scripts/fixtures/{pothole,garbage,water,streetlight}.jpg
+
+# 2. run the honest inference harness
+node scripts/test-yolo.mjs scripts/fixtures/pothole.jpg scripts/fixtures/garbage.jpg scripts/fixtures/water.jpg scripts/fixtures/streetlight.jpg
 ```
 
 The harness prints the ACTUAL class, confidence and bounding boxes returned
