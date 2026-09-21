@@ -6,11 +6,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
-  // firebase-admin must stay external in serverless bundles: it resolves
-  // modules dynamically at runtime (google-auth-library, websockets, etc.),
-  // which webpack breaks when it inlines the package. Without this the
-  // /api/auth/google route crashes with a 500 on every request.
-  serverExternalPackages: ["firebase-admin"],
+  // Removed serverExternalPackages: ["firebase-admin"] to allow native bundling
 };
 
 export default nextConfig;
