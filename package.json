@@ -38,5 +38,10 @@
     "tsx": "^4.23.14",
     "typescript": "^5",
     "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "jwks-rsa": {
+      "jose": "^5.9.6"
+    }
   }
 }
