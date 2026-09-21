@@ -51,3 +51,6 @@ vision-service/model/*.pt
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+.env*.local
